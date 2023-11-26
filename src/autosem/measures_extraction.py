@@ -430,8 +430,3 @@ class SizeExtractor(Extractor):
         data = self._clean_up(data)
 
         return data
-
-
-if __name__ == "__main__":
-    MD = MeasuresData()
-    MD.getNames()

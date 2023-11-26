@@ -111,17 +111,3 @@ class CountsNumeroExtractor(Extractor):
         data["Исключающее количество (№)"] = countsExcludeRX
 
         return data
-
-
-if __name__ == "__main__":
-    data = pd.DataFrame()
-    data.at[0, "Название"] = "Яблоки 19 штук"
-    data.at[1, "Название"] = "Яблоки 10 упаковок"
-    data.at[2, "Название"] = "Яблоки 5 штук №228"
-    data.at[3, "Название"] = "Яблоки 1 штук"
-    data.at[4, "Название"] = "Яблоки №3"
-
-    extractor = CountsNumeroExtractor(exclude_rx=True)
-    data = extractor.extract(data, "Название")
-
-    print(data)
