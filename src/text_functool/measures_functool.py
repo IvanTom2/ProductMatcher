@@ -3,14 +3,23 @@ from typing import Any
 import pandas as pd
 import json
 from pathlib import Path
-
+from abc import ABC
 
 from decimal import Decimal
 from collections import namedtuple
 from typing import Union
 
 
-class MeasureFeature(object):
+class AbstractMeasureFeature(object):
+    name: str
+    defenition: str
+    relative_weight: str
+    search_mode: str
+    prefix: str
+    postfix: str
+
+
+class MeasureFeature(AbstractMeasureFeature):
     def __init__(
         self,
         feature_data: dict,
@@ -21,7 +30,7 @@ class MeasureFeature(object):
 
         self.name = FD["feature_name"]
         self.defenition = FD["defenition"]
-        self.relative_weight = FD["relative_weight"]
+        self.relative_weight = Decimal(str(FD["relative_weight"]))
 
         self.search_mode = FD["search_mode"] if "search_mode" in FD else "post"
         self.prefix = FD["prefix"] if "prefix" in FD else common_prefix
@@ -41,22 +50,100 @@ class MeasureFeature(object):
 
     def _make_search_rx(self) -> str:
         if self.search_mode == "post":
-            rx = f"\d*[.,]?\d+\s*(?:{self.defenition})"
+            rx = rf"\d*[.,]?\d+\s*(?:{self.defenition})"
         else:
-            rx = f"(?:{self.defenition})\s*\d*[.,]?\d+"
+            rx = rf"(?:{self.defenition})\s*\d*[.,]?\d+"
 
         return rx
+
+    def _extract_values(self, string: pd.Series) -> list[str]:
+        return re.findall(self._search_rx, string, re.IGNORECASE)
+
+    def _extract_numeric_values(self, values: list[str]) -> list[str]:
+        numeric_values = []
+        for value in values:
+            searched = re.search(r"\d*[.,]?\d+", value, re.IGNORECASE)
+            if searched:
+                numeric_values.append(Decimal(searched[0]))
+
+        return numeric_values
+
+    def _prepare_num(self, num: str) -> str:
+        if num and not isinstance(num, list):
+            num = f"{num:.20f}"
+            if isinstance(num, str):
+                if "." in num:
+                    num = re.sub("0+$", "", num)
+                    num = re.sub("\.$", "", num)
+        return num
+
+    def _to_regex(
+        self,
+        numeric_values: str,
+        features: list[AbstractMeasureFeature],
+    ) -> str:
+        regexes = []
+
+        for numeric_value in numeric_values:
+            rx_parts = []
+            for feature in features:
+                num: Decimal = numeric_value * (
+                    self.relative_weight / feature.relative_weight
+                )
+                num = self._prepare_num(num)
+
+                if feature.search_mode == "post":
+                    rx_part = (
+                        feature.prefix
+                        + "\D"
+                        + num
+                        + "\s*"
+                        + "(?:"
+                        + feature.defenition
+                        + ")"
+                        + feature.postfix
+                    )
+
+                else:
+                    rx_part = (
+                        feature.prefix
+                        + "(?:"
+                        + feature.defenition
+                        + ")"
+                        + "\s*"
+                        + num
+                        + feature.postfix
+                    )
+
+                rx_parts.append(rx_part)
+
+            regexes.append("|".join(rx_parts))
+
+        return regexes
 
     def extract(
         self,
         data: pd.DataFrame,
         column: str,
     ) -> pd.Series:
-        values = data[column].apply(
-            re.findall,
-            args=(self._search_rx,),
-        )
+        values = data[column].apply(self._extract_values)
         return values
+
+    def transform(
+        self,
+        values: pd.Series,
+    ) -> pd.Series:
+        numeric_values = values.apply(self._extract_numeric_values)
+
+        regex = numeric_values.apply(
+            self._to_regex,
+            args=([self, *self.relative_features],),
+        )
+
+        regex = "(?=.*(" + regex.str.join("))(?=*.(") + "))"
+        regex = regex.replace("(?=.*())", "")
+
+        return regex
 
     def add_relative(self, features) -> None:
         self.relative_features.extend(features)
@@ -131,18 +218,22 @@ class Measure(object):
     def _allocate_relative_features(self) -> None:
         if self.merge_mode in ("o", "overall"):
             for feature in self.features:
-                other_features = [f for f in self.features if f is not feature]
+                other_features = [f for f in self.features if f != feature]
                 feature.add_relative(other_features)
 
         else:
             shift = int(self.merge_mode)
             for index in range(len(self.features)):
                 feature = self.features[index]
-                left = self.features[max(0, index - shift - 1) : index - 1]
-                right = self.features[index : min(len(self.features), index + shift)]
+                maxlen = len(self.features)
+
+                left = self.features[max(0, index - shift) : index]
+                right = self.features[
+                    min(index + 1, maxlen) : min(index + shift + 1, maxlen)
+                ]
 
                 other_features = left + right
-                other_features = [f for f in self.features if f is not feature]
+                other_features = [f for f in other_features if f != feature]
 
                 feature.add_relative(other_features)
 
@@ -151,11 +242,15 @@ class Measure(object):
         data: pd.DataFrame,
         column: str,
     ) -> pd.Series:
+        feature_names = []
         for feature in self.features:
             values = feature.extract(data, column)
-            print(values)
+            rx_patterns = feature.transform(values)
 
-        return data
+            data[feature.name] = rx_patterns
+            feature_names.append(feature.name)
+
+        return data, feature_names
 
 
 class Measures(object):
@@ -177,6 +272,8 @@ class Measures(object):
 
         self.measures_names = self._extract_measures_names(config)
         self.measures = self._parse_rules(config)
+
+        self.used_feature_names = []
 
     def __iter__(self):
         self.__iterbale = list(self.measures.keys())
@@ -224,7 +321,7 @@ class Measures(object):
 
     def _parse_rules(self, config: dict) -> dict[str, Measure]:
         measures_list = {}
-        for measure in config["measures"]:
+        for measure in config["measures"][2:3]:
             measures_list[measure["measure_name"]] = Measure(
                 measure["measure_name"],
                 measure["merge_mode"],
@@ -233,15 +330,30 @@ class Measures(object):
 
         return measures_list
 
-    def extract_all(
+    def extract_regex(
         self,
         data: pd.DataFrame,
         column: str,
     ) -> pd.DataFrame:
         for measure_name in self.measures_names:
             measure = self.measures[measure_name]
+            data, feature_names = measure.extract(data, column)
 
-            data = measure.extract(data, column)
+            self.used_feature_names.extend(feature_names)
+
+        return data
+
+    def concat_regex(
+        self,
+        data: pd.DataFrame,
+        delete_columns: bool = False,
+    ) -> pd.DataFrame:
+        data["regex"] = ""
+        for feature_name in self.used_feature_names:
+            data["regex"] += data[feature_name]
+
+        if delete_columns:
+            data = data.drop(self.used_feature_names, axis=1)
 
         return data
 
@@ -250,9 +362,12 @@ if __name__ == "__main__":
     data = pd.DataFrame()
     data.at[0, "name"] = "Апельсины 100гр"
     data.at[1, "name"] = "Апельсины 10кг"
-    data.at[2, "name"] = "Вода 1000мл"
+    data.at[2, "name"] = "Вода 1000мл 40мл"
     data.at[3, "name"] = "Сок 1л"
-    data.at[4, "name"] = "Пиво 500мл"
+    data.at[4, "name"] = "Пиво 500мл 600мл"
 
     measures = Measures("main")
-    data = measures.extract_all(data, "name")
+    # data = measures.extract_regex(data, "name")
+    # data = measures.concat_regex(data, True)
+
+    # print(data.at[4, "regex"])
