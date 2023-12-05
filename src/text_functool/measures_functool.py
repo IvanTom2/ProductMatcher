@@ -1,227 +1,258 @@
-import re
+import regex as re
+from typing import Any
 import pandas as pd
+import json
+from pathlib import Path
+
 
 from decimal import Decimal
 from collections import namedtuple
+from typing import Union
 
 
-Measure = namedtuple(
-    "Measure",
-    [
-        "name",
-        "symbols",
-        "ratio",
-        "prefix",
-        "postfix",
-    ],
-)
-
-
-MeasureNGram = namedtuple(
-    "MeasureNGram",
-    [
-        "position",
-        "Measures",
-    ],
-)
-
-
-def makeMeasureNGram(
-    ngram_data: list[Measure],
-    main_measure_name: str,
-) -> list[Measure]:
-    def countRatio(ratio, currentMeasureRatio):
-        # TODO - здесь может быть скрыт баг в round()
-        newRatio = ratio / currentMeasureRatio
-        newRatio = newRatio if newRatio < 1 else round(newRatio)
-        return newRatio
-
-    def findPos(ngram_data, main_measure_name):
-        position = 0
-        for index in range(len(ngram_data)):
-            if ngram_data[index].name == main_measure_name:
-                position = index
-        return position
-
-    position = findPos(ngram_data, main_measure_name)
-
-    currentMeasureRatio = ngram_data[position].ratio
-    measureTripletData = [
-        Measure(
-            measure.name,
-            measure.symbols,
-            countRatio(measure.ratio, currentMeasureRatio),
-            measure.prefix,
-            measure.postfix,
-        )
-        for measure in ngram_data
-    ]
-
-    return MeasureNGram(position, measureTripletData)
-
-
-class Measures(object):
-    def __init__(self, measures_data) -> None:
-        self.measures = [self.setupMeasure(measure) for measure in measures_data]
-
-    def setupMeasure(self, measure):
-        def _try(key):
-            try:
-                _return = measure[key]
-            except Exception:
-                _return = ""
-            finally:
-                return _return
-
-        return Measure(
-            measure["name"],
-            measure["symbols"],
-            measure["ratio"],
-            _try("prefix"),
-            _try("postfix"),
-        )
-
-    def makeTriplets(self):
-        triplets = []
-        for measure_index in range(len(self.measures)):
-            main_measure_name = self.measures[measure_index].name
-
-            if measure_index == 0:
-                triplet_data = self.measures[measure_index : measure_index + 2]
-                feature = makeMeasureNGram(triplet_data, main_measure_name)
-
-            elif measure_index == len(self.measures) - 1:
-                triplet_data = self.measures[measure_index - 1 : measure_index + 1]
-                feature = makeMeasureNGram(triplet_data, main_measure_name)
-
-            else:
-                triplet_data = self.measures[measure_index - 1 : measure_index + 2]
-                feature = makeMeasureNGram(triplet_data, main_measure_name)
-
-            triplets.append(feature)
-
-        return triplets
-
-    def makeOverall(self):
-        overall = []
-        for measure_index in range(len(self.measures)):
-            main_measure_name = self.measures[measure_index].name
-            overall_data = self.measures[:]
-
-            feature = makeMeasureNGram(overall_data, main_measure_name)
-            overall.append(feature)
-
-        return overall
-
-
-class MeasureFuncTool(object):
-    def _makeDefaultRX(
+class MeasureFeature(object):
+    def __init__(
         self,
-        measure: Measure,
-        value: str,
-    ) -> str:
-        symbols = measure.symbols
-        prefix = measure.prefix
-        postfix = measure.postfix
+        feature_data: dict,
+        common_prefix: str,
+        common_postfix: str,
+    ) -> None:
+        FD = feature_data
 
-        rx = rf"{value}\s*?(?:{symbols})"
-        rx = rf"{rx}(?:{postfix})" if postfix else rx
-        rx = rf"(?:{prefix}){rx}" if prefix else rx
+        self.name = FD["feature_name"]
+        self.defenition = FD["defenition"]
+        self.relative_weight = FD["relative_weight"]
+
+        self.search_mode = FD["search_mode"] if "search_mode" in FD else "post"
+        self.prefix = FD["prefix"] if "prefix" in FD else common_prefix
+        self.postfix = FD["postfix"] if "postfix" in FD else common_postfix
+
+        self._search_rx = self._make_search_rx()
+        self.relative_features = []
+
+    def __eq__(self, __value: object) -> bool:
+        if isinstance(__value, self.__class__):
+            if self.name == __value.name:
+                return True
+            else:
+                return False
+        else:
+            return False
+
+    def _make_search_rx(self) -> str:
+        if self.search_mode == "post":
+            rx = f"\d*[.,]?\d+\s*(?:{self.defenition})"
+        else:
+            rx = f"(?:{self.defenition})\s*\d*[.,]?\d+"
 
         return rx
 
-    def extractMeasureValues(
+    def extract(
         self,
-        series: pd.Series,
-        nGram: MeasureNGram,
-        max_values: int = 0,
-    ):
-        """Look up in lower case"""
-        rx = self._makeDefaultRX(nGram.Measures[nGram.position], "(\d*[,.]?\d+)")
-
-        measureValues = series.str.lower().str.findall(rx, flags=re.IGNORECASE)
-        measureValues = measureValues.apply(
-            lambda words: list(map(lambda word: word.replace(",", "."), words))
+        data: pd.DataFrame,
+        column: str,
+    ) -> pd.Series:
+        values = data[column].apply(
+            re.findall,
+            args=(self._search_rx,),
         )
+        return values
 
-        if max_values:
-            measureValues = measureValues.apply(lambda x: x[:max_values])
+    def add_relative(self, features) -> None:
+        self.relative_features.extend(features)
 
-        return measureValues
+    def __repr__(self) -> str:
+        _return = []
+        _return.append(f"name: {self.name}")
+        _return.append(f"defenition: {self.defenition}")
+        _return.append(f"relative_weight: {self.relative_weight}")
+        _return.append(f"prefix: '{self.prefix}'")
+        _return.append(f"postfix: '{self.postfix}'\n")
+        return "\n".join(_return)
 
-    def createMeasureRX(self, measureValues: pd.Series, nGram: MeasureNGram):
-        def transform(values, nGram):
-            def prepValue(value):
-                value = format(float(value), ".12f")
-                value = re.sub(r"\.0+$", "", value)
-                if "." in value:
-                    value = value.rstrip("0")
 
-                value = value.replace(".", "[,.]")
-                return "\D" + value
-
-            output = []
-            for value in values:
-                measure_rx = "(?=.*("
-                for measure in nGram.Measures:
-                    val = Decimal(str(value)) / Decimal(str(measure.ratio))
-                    measure_rx += self._makeDefaultRX(measure, prepValue(val)) + "|"
-
-                measure_rx = re.sub("\|$", "", measure_rx) + "))"
-                output.append(measure_rx)
-            return output
-
-        name = nGram.Measures[nGram.position].name
-        measureValues.rename(name, inplace=True)
-
-        measureRX = measureValues.apply(lambda x: list(map(float, x)))
-        measureRX = measureRX.apply(transform, args=(nGram,))
-        measureRX = measureRX.str.join("")
-
-        return measureRX
-
-    def extractSizeMeasureValues(
+class Measure(object):
+    def __init__(
         self,
-        series: pd.Series,
-        sep: str = "[xх]",
-        measure: str = "",
-    ):
-        _int = r"\d*[.,]?\d+"
-        _measure = rf"\s*?(?:{measure})?\s*?"
+        measure_name: str,
+        merge_mode: str,
+        measure_data: dict,
+    ) -> None:
+        self.name = measure_name
+        self.merge_mode = merge_mode
 
-        rx = rf"({_int}{_measure}{sep}{_int}){_measure}{sep}?"
+        self.features = self._parse_measure_data(measure_data)
+        self._sort_features()
+        self._allocate_relative_features()
 
-        measureValues = series.str.findall(rx)
-        measureValues = measureValues.apply(
-            lambda words: list(map(lambda word: word.replace(",", "."), words))
-        )
+    def __iter__(self):
+        self.__i = 0
+        return self
 
-        if measure:
-            measureValues = measureValues.apply(
-                lambda sizes: [size.replace(measure, "") for size in sizes]
+    def __next__(self) -> MeasureFeature:
+        if self.__i >= len(self.features):
+            raise StopIteration
+        else:
+            item = self.features[self.__i]
+            self.__i += 1
+            return item
+
+    def __len__(self) -> int:
+        return len(self.features)
+
+    def __getitem__(self, index: int) -> MeasureFeature:
+        if index >= len(self.features):
+            raise IndexError()
+        else:
+            return self.features[index]
+
+    def __repr__(self) -> str:
+        return self.name
+
+    def _parse_measure_data(self, measure_data: dict) -> list[MeasureFeature]:
+        common_prefix = measure_data["common_prefix"]
+        common_postfix = measure_data["common_postfix"]
+
+        features = []
+        for feature_data in measure_data["features"]:
+            features.append(
+                MeasureFeature(
+                    feature_data,
+                    common_prefix,
+                    common_postfix,
+                )
             )
 
-        measureValues = measureValues.apply(
-            lambda sizes: [re.split(sep, size) for size in sizes]
-        )
+        return features
 
-        return measureValues
+    def _sort_features(self) -> None:
+        self.features.sort(key=lambda ft: ft.relative_weight)
 
-    def createSizeMeasureRX(
+    def _allocate_relative_features(self) -> None:
+        if self.merge_mode in ("o", "overall"):
+            for feature in self.features:
+                other_features = [f for f in self.features if f is not feature]
+                feature.add_relative(other_features)
+
+        else:
+            shift = int(self.merge_mode)
+            for index in range(len(self.features)):
+                feature = self.features[index]
+                left = self.features[max(0, index - shift - 1) : index - 1]
+                right = self.features[index : min(len(self.features), index + shift)]
+
+                other_features = left + right
+                other_features = [f for f in self.features if f is not feature]
+
+                feature.add_relative(other_features)
+
+    def extract(
         self,
-        measureValues: pd.Series,
-        sep: str,
-        measure: str,
-        swap: bool = False,
-    ):
-        measureValues = measureValues.apply(
-            lambda sizes: [
-                [f"\D?{s.replace('.', '[,.]')}" for s in size] for size in sizes
-            ]
-        )
+        data: pd.DataFrame,
+        column: str,
+    ) -> pd.Series:
+        for feature in self.features:
+            values = feature.extract(data, column)
+            print(values)
 
-        measureValues = measureValues.apply(
-            lambda sizes: [f"?{sep}".join(size) for size in sizes]
-        )
+        return data
 
-        return measureValues
+
+class Measures(object):
+    """
+    config_name - name of config file without .json
+    measures_names - list of measures names for usage
+    """
+
+    __PATH = Path(__file__).parent.parent.parent / "autosem_config"
+
+    def __init__(
+        self,
+        config_name: str = "main",
+    ) -> None:
+        self.name = config_name
+
+        self._config_path = self.__PATH / f"{config_name}.json"
+        config = self._read_config()
+
+        self.measures_names = self._extract_measures_names(config)
+        self.measures = self._parse_rules(config)
+
+    def __iter__(self):
+        self.__iterbale = list(self.measures.keys())
+        self.__i = 0
+        return self
+
+    def __next__(self) -> Measure:
+        if self.__i >= len(self.measures):
+            raise StopIteration
+        else:
+            key = self.__iterbale[self.__i]
+            item = self.measures[key]
+            self.__i += 1
+            return item
+
+    def __len__(self) -> int:
+        return len(self.measures)
+
+    def __getitem__(self, subscript: Union[int, str]) -> Measure:
+        if isinstance(subscript, int):
+            if subscript >= len(self.measures):
+                raise IndexError
+            else:
+                key = list(self.measures.keys())[subscript]
+                return self.measures[key]
+
+        else:
+            if subscript in self.measures:
+                return self.measures[subscript]
+            else:
+                raise KeyError
+
+    def _read_config(self) -> dict:
+        with open(self._config_path, "rb") as file:
+            rules = file.read()
+        return json.loads(rules)
+
+    def _extract_measures_names(self, config: dict) -> list[str]:
+        measures = []
+        measures_records = config["measures"]
+        for mrecord in measures_records:
+            if "measure_name" in mrecord:
+                measures.append(mrecord["measure_name"])
+        return measures
+
+    def _parse_rules(self, config: dict) -> dict[str, Measure]:
+        measures_list = {}
+        for measure in config["measures"]:
+            measures_list[measure["measure_name"]] = Measure(
+                measure["measure_name"],
+                measure["merge_mode"],
+                measure["measure_data"],
+            )
+
+        return measures_list
+
+    def extract_all(
+        self,
+        data: pd.DataFrame,
+        column: str,
+    ) -> pd.DataFrame:
+        for measure_name in self.measures_names:
+            measure = self.measures[measure_name]
+
+            data = measure.extract(data, column)
+
+        return data
+
+
+if __name__ == "__main__":
+    data = pd.DataFrame()
+    data.at[0, "name"] = "Апельсины 100гр"
+    data.at[1, "name"] = "Апельсины 10кг"
+    data.at[2, "name"] = "Вода 1000мл"
+    data.at[3, "name"] = "Сок 1л"
+    data.at[4, "name"] = "Пиво 500мл"
+
+    measures = Measures("main")
+    data = measures.extract_all(data, "name")

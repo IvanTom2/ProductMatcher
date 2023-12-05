@@ -16,7 +16,7 @@ from text_functool.words_functool import (
     Languages,
     WordsFuncTool,
 )
-from text_functool.measures_functool import Measures, MeasureFuncTool
+from text_functool.measures_functool import AutosemRules, MeasureFeature, Measure
 
 
 class Extractor(ABC):

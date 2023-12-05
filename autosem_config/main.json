@@ -1,0 +1,73 @@
+{
+    "config_name": "main",
+    "measures": [
+        {
+            "measure_name": "Объем",
+            "merge_mode": "1",
+            "measure_data": {
+                "common_prefix": "",
+                "common_postfix": "",
+                "features": [
+                    {
+                        "feature_name": "Миллилитр",
+                        "defenition": "мл|миллилитр|ml|milliliter",
+                        "relative_weight": 0.001,
+                        "prefix": "",
+                        "postfix": "",
+                        "search_mode": "post"
+                    },
+                    {
+                        "feature_name": "Литр",
+                        "defenition": "литр|л|liter|l",
+                        "relative_weight": 1,
+                        "prefix": "",
+                        "postfix": "",
+                        "search_mode": "post"
+                    }
+                ]
+            }
+        },
+        {
+            "measure_name": "Вес",
+            "merge_mode": "1",
+            "measure_data": {
+                "common_prefix": "",
+                "common_postfix": "",
+                "features": [
+                    {
+                        "feature_name": "Микрограмм",
+                        "defenition": "мкг|микрограмм|µg|microgram",
+                        "relative_weight": 0.000000001,
+                        "prefix": "",
+                        "postfix": "",
+                        "search_mode": "post"
+                    },
+                    {
+                        "feature_name": "Миллиграмм",
+                        "defenition": "мг|миллиграмм|mg|milligram",
+                        "relative_weight": 0.000001,
+                        "prefix": "",
+                        "postfix": "",
+                        "search_mode": "post"
+                    },
+                    {
+                        "feature_name": "Грамм",
+                        "defenition": "г|гр|грамм|g|gram",
+                        "relative_weight": 0.001,
+                        "prefix": "",
+                        "postfix": "",
+                        "search_mode": "post"
+                    },
+                    {
+                        "feature_name": "Килограмм",
+                        "defenition": "кг|килограмм|kg|kilogram",
+                        "relative_weight": 1,
+                        "prefix": "",
+                        "postfix": "",
+                        "search_mode": "post"
+                    }
+                ]
+            }
+        }
+    ]
+}
