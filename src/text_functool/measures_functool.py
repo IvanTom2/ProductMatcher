@@ -140,7 +140,7 @@ class MeasureFeature(AbstractMeasureFeature):
             args=([self, *self.relative_features],),
         )
 
-        regex = "(?=.*(" + regex.str.join("))(?=*.(") + "))"
+        regex = "(?=.*(" + regex.str.join("))(?=.*(") + "))"
         regex = regex.replace("(?=.*())", "")
 
         return regex
@@ -255,8 +255,13 @@ class Measure(object):
 
 class Measures(object):
     """
-    config_name - name of config file without .json
-    measures_names - list of measures names for usage
+    Measures container class for manage and control regex creation
+
+    Parameters
+    ----------
+    config_name : str
+        Name of config file for usage (don't pass path, only filename)
+
     """
 
     __PATH = Path(__file__).parent.parent.parent / "autosem_config"
@@ -307,11 +312,15 @@ class Measures(object):
                 raise KeyError
 
     def _read_config(self) -> dict:
+        """Returns config file like dict object"""
+
         with open(self._config_path, "rb") as file:
             rules = file.read()
         return json.loads(rules)
 
     def _extract_measures_names(self, config: dict) -> list[str]:
+        """Extracts measures names from config file (not features names)"""
+
         measures = []
         measures_records = config["measures"]
         for mrecord in measures_records:
@@ -320,8 +329,11 @@ class Measures(object):
         return measures
 
     def _parse_rules(self, config: dict) -> dict[str, Measure]:
+        """Parse config and create dict with Measure objects
+        accorging to parsed rules"""
+
         measures_list = {}
-        for measure in config["measures"][2:3]:
+        for measure in config["measures"]:
             measures_list[measure["measure_name"]] = Measure(
                 measure["measure_name"],
                 measure["merge_mode"],
@@ -330,11 +342,31 @@ class Measures(object):
 
         return measures_list
 
-    def extract_regex(
+    def extract_measure(
+        self,
+        data: pd.DataFrame,
+        column: str,
+        measure_name: str,
+    ) -> pd.Series:
+        """Extract regex by measure name"""
+
+        measure = self.measures[measure_name]
+        data, feature_names = measure.extract(data, column)
+
+        extracted = data[feature_names[0]]
+        if len(feature_names) > 2:
+            for feature_name in feature_names[1:]:
+                extracted += data[feature_name]
+
+        return extracted
+
+    def extract_all(
         self,
         data: pd.DataFrame,
         column: str,
     ) -> pd.DataFrame:
+        """Extract regex by all measures"""
+
         for measure_name in self.measures_names:
             measure = self.measures[measure_name]
             data, feature_names = measure.extract(data, column)
@@ -346,13 +378,13 @@ class Measures(object):
     def concat_regex(
         self,
         data: pd.DataFrame,
-        delete_columns: bool = False,
+        delete_features_columns: bool = False,
     ) -> pd.DataFrame:
         data["regex"] = ""
         for feature_name in self.used_feature_names:
             data["regex"] += data[feature_name]
 
-        if delete_columns:
+        if delete_features_columns:
             data = data.drop(self.used_feature_names, axis=1)
 
         return data
@@ -367,7 +399,10 @@ if __name__ == "__main__":
     data.at[4, "name"] = "Пиво 500мл 600мл"
 
     measures = Measures("main")
-    # data = measures.extract_regex(data, "name")
+    check = measures.extract_measure(data, "name", "Объем")
     # data = measures.concat_regex(data, True)
 
+    print(check.at[4])
+
     # print(data.at[4, "regex"])
+    # print(data)
