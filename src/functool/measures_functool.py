@@ -4,10 +4,47 @@ import pandas as pd
 import json
 from pathlib import Path
 from abc import ABC
-
+import sys
 from decimal import Decimal
 from collections import namedtuple
 from typing import Union
+from enum import Enum
+
+sys.path.append(str(Path(__file__).parent.parent))
+sys.path.append(str(Path(__file__).parent.parent.parent))
+
+from autosem_config.config_parser import CONFIG, MEASURE, DATA, FEATURE
+
+
+class SearchMode(object):
+    FRONT = "front"
+    BEHIND = "behind"
+    modes = {FRONT, BEHIND}
+
+    default = BEHIND
+
+    @classmethod
+    def checkout(self, mode: str) -> str:
+        mode = str(mode).lower()
+        if mode not in self.modes:
+            mode = self.default
+        return mode
+
+
+class MergeMode(object):
+    NONE = "none"
+    OVERALL = "overall"
+    modes = {OVERALL, NONE}
+
+    default = "overall"
+
+    @classmethod
+    def checkout(self, mode: str) -> str:
+        mode = str(mode).lower()
+        if mode not in self.modes:
+            if not mode.isnumeric():
+                mode = self.default
+        return mode
 
 
 class AbstractMeasureFeature(object):
@@ -25,19 +62,27 @@ class MeasureFeature(AbstractMeasureFeature):
         feature_data: dict,
         common_prefix: str,
         common_postfix: str,
+        common_max_count: str,
     ) -> None:
         FD = feature_data
 
-        self.name = FD["feature_name"]
-        self.defenition = FD["defenition"]
-        self.relative_weight = Decimal(str(FD["relative_weight"]))
+        self.name = FD[FEATURE.NAME]
+        self.defenition = FD[FEATURE.DEFENITION]
+        self.relative_weight = Decimal(str(FD[FEATURE.RWEIGHT]))
 
-        self.search_mode = FD["search_mode"] if "search_mode" in FD else "post"
-        self.prefix = FD["prefix"] if "prefix" in FD else common_prefix
-        self.postfix = FD["postfix"] if "postfix" in FD else common_postfix
+        self.search_mode = (
+            SearchMode.checkout(FD[FEATURE.SEARCH_MODE])
+            if FEATURE.SEARCH_MODE in FD
+            else SearchMode.default
+        )
+        self.prefix = FD[FEATURE.PREFIX] if FEATURE.PREFIX in FD else common_prefix
+        self.postfix = FD[FEATURE.POSTFIX] if FEATURE.POSTFIX in FD else common_postfix
+        self.max_count = (
+            FD[FEATURE.MAX_COUNT] if FEATURE.MAX_COUNT in FD else common_max_count
+        )
 
         self._search_rx = self._make_search_rx()
-        self.relative_features = []
+        self.allocated_features = [self]
 
     def __eq__(self, __value: object) -> bool:
         if isinstance(__value, self.__class__):
@@ -49,7 +94,7 @@ class MeasureFeature(AbstractMeasureFeature):
             return False
 
     def _make_search_rx(self) -> str:
-        if self.search_mode == "post":
+        if self.search_mode == SearchMode.BEHIND:
             rx = rf"\d*[.,]?\d+\s*(?:{self.defenition})"
         else:
             rx = rf"(?:{self.defenition})\s*\d*[.,]?\d+"
@@ -77,12 +122,11 @@ class MeasureFeature(AbstractMeasureFeature):
                     num = re.sub("\.$", "", num)
         return num
 
-    def _to_regex(
-        self,
-        numeric_values: str,
-        features: list[AbstractMeasureFeature],
-    ) -> str:
+    def _to_regex(self, numeric_values: str) -> str:
         regexes = []
+        features: list[AbstractMeasureFeature] = self.allocated_features
+
+        worked_features = set()
 
         for numeric_value in numeric_values:
             rx_parts = []
@@ -92,7 +136,7 @@ class MeasureFeature(AbstractMeasureFeature):
                 )
                 num = self._prepare_num(num)
 
-                if feature.search_mode == "post":
+                if feature.search_mode == SearchMode.BEHIND:
                     rx_part = (
                         feature.prefix
                         + "\D"
@@ -112,10 +156,12 @@ class MeasureFeature(AbstractMeasureFeature):
                         + ")"
                         + "\s*"
                         + num
+                        + "\D"
                         + feature.postfix
                     )
 
                 rx_parts.append(rx_part)
+                worked_features.add(feature.name)
 
             regexes.append("|".join(rx_parts))
 
@@ -123,30 +169,43 @@ class MeasureFeature(AbstractMeasureFeature):
 
     def extract(
         self,
-        data: pd.DataFrame,
-        column: str,
-    ) -> pd.Series:
-        values = data[column].apply(self._extract_values)
+        extract_from: list[str],
+    ) -> list[list[str]]:
+        values = list(map(self._extract_values, extract_from))
         return values
+
+    def filter_count(
+        self,
+        extracted_values: list[list[str]],
+    ) -> list[list[str]]:
+        if self.max_count != None:
+            extracted_values = list(
+                map(
+                    lambda x: x[: self.max_count],
+                    extracted_values,
+                )
+            )
+
+        return extracted_values
 
     def transform(
         self,
-        values: pd.Series,
-    ) -> pd.Series:
-        numeric_values = values.apply(self._extract_numeric_values)
-
-        regex = numeric_values.apply(
-            self._to_regex,
-            args=([self, *self.relative_features],),
+        extracted_values: list[list[str]],
+    ) -> list[list[str]]:
+        numeric_values = map(
+            self._extract_numeric_values,
+            extracted_values,
         )
 
-        regex = "(?=.*(" + regex.str.join("))(?=.*(") + "))"
-        regex = regex.replace("(?=.*())", "")
+        regex_values = map(self._to_regex, numeric_values)
+        regex_values = map(lambda x: "))(?=.*(".join(x), regex_values)
+        regex_values = map(lambda x: "(?=.*(" + x + "))", regex_values)
+        regex_values = map(lambda x: x.replace("(?=.*())", ""), regex_values)
 
-        return regex
+        return list(regex_values)
 
     def add_relative(self, features) -> None:
-        self.relative_features.extend(features)
+        self.allocated_features.extend(features)
 
     def __repr__(self) -> str:
         _return = []
@@ -168,7 +227,7 @@ class Measure(object):
         self.name = measure_name
         self.merge_mode = merge_mode
 
-        self.features = self._parse_measure_data(measure_data)
+        self.features = self._create_features(measure_data)
         self._sort_features()
         self._allocate_relative_features()
 
@@ -196,17 +255,19 @@ class Measure(object):
     def __repr__(self) -> str:
         return self.name
 
-    def _parse_measure_data(self, measure_data: dict) -> list[MeasureFeature]:
-        common_prefix = measure_data["common_prefix"]
-        common_postfix = measure_data["common_postfix"]
+    def _create_features(self, measure_data: dict) -> list[MeasureFeature]:
+        common_prefix = measure_data[DATA.COMMON_PREFIX]
+        common_postfix = measure_data[DATA.COMMON_POSTFIX]
+        common_max_count = measure_data[DATA.COMMON_MAX_COUNT]
 
         features = []
-        for feature_data in measure_data["features"]:
+        for feature_data in measure_data[DATA.FEATURES]:
             features.append(
                 MeasureFeature(
                     feature_data,
                     common_prefix,
                     common_postfix,
+                    common_max_count,
                 )
             )
 
@@ -216,7 +277,10 @@ class Measure(object):
         self.features.sort(key=lambda ft: ft.relative_weight)
 
     def _allocate_relative_features(self) -> None:
-        if self.merge_mode in ("o", "overall"):
+        if self.merge_mode == MergeMode.NONE:
+            pass
+
+        elif self.merge_mode == MergeMode.OVERALL:
             for feature in self.features:
                 other_features = [f for f in self.features if f != feature]
                 feature.add_relative(other_features)
@@ -241,11 +305,14 @@ class Measure(object):
         self,
         data: pd.DataFrame,
         column: str,
-    ) -> pd.Series:
+    ) -> pd.DataFrame:
         feature_names = []
+        extract_from = data[column].to_list()
+
         for feature in self.features:
-            values = feature.extract(data, column)
-            rx_patterns = feature.transform(values)
+            extracted_values = feature.extract(extract_from)
+            extracted_values = feature.filter_count(extracted_values)
+            rx_patterns = feature.transform(extracted_values)
 
             data[feature.name] = rx_patterns
             feature_names.append(feature.name)
@@ -276,7 +343,7 @@ class Measures(object):
         config = self._read_config()
 
         self.measures_names = self._extract_measures_names(config)
-        self.measures = self._parse_rules(config)
+        self.measures = self._create_measures(config)
 
         self.used_feature_names = []
 
@@ -322,22 +389,22 @@ class Measures(object):
         """Extracts measures names from config file (not features names)"""
 
         measures = []
-        measures_records = config["measures"]
+        measures_records = config[CONFIG.MEASURES]
         for mrecord in measures_records:
-            if "measure_name" in mrecord:
-                measures.append(mrecord["measure_name"])
+            if MEASURE.NAME in mrecord:
+                measures.append(mrecord[MEASURE.NAME])
         return measures
 
-    def _parse_rules(self, config: dict) -> dict[str, Measure]:
+    def _create_measures(self, config: dict) -> dict[str, Measure]:
         """Parse config and create dict with Measure objects
         accorging to parsed rules"""
 
         measures_list = {}
-        for measure in config["measures"]:
-            measures_list[measure["measure_name"]] = Measure(
-                measure["measure_name"],
-                measure["merge_mode"],
-                measure["measure_data"],
+        for measure in config[CONFIG.MEASURES]:
+            measures_list[measure[MEASURE.NAME]] = Measure(
+                measure[MEASURE.NAME],
+                measure[MEASURE.MERGE_MODE],
+                measure[MEASURE.DATA],
             )
 
         return measures_list
@@ -354,7 +421,7 @@ class Measures(object):
         data, feature_names = measure.extract(data, column)
 
         extracted = data[feature_names[0]]
-        if len(feature_names) > 2:
+        if len(feature_names) >= 2:
             for feature_name in feature_names[1:]:
                 extracted += data[feature_name]
 
@@ -365,7 +432,7 @@ class Measures(object):
         data: pd.DataFrame,
         column: str,
     ) -> pd.DataFrame:
-        """Extract regex by all measures"""
+        """Extract regex for all measures"""
 
         for measure_name in self.measures_names:
             measure = self.measures[measure_name]
@@ -397,12 +464,15 @@ if __name__ == "__main__":
     data.at[2, "name"] = "Вода 1000мл 40мл"
     data.at[3, "name"] = "Сок 1л"
     data.at[4, "name"] = "Пиво 500мл 600мл"
+    data.at[5, "name"] = "Бананы 10шт"
+    data.at[6, "name"] = "Аспирин №10"
 
     measures = Measures("main")
-    check = measures.extract_measure(data, "name", "Объем")
-    # data = measures.concat_regex(data, True)
+    data = measures.extract_all(data, "name")
+    data = measures.concat_regex(data, True)
 
-    print(check.at[4])
-
-    # print(data.at[4, "regex"])
+    # print(data.at[6, "regex"])
     # print(data)
+
+    check = measures.extract_measure(data, "name", "Количество")
+    print(check[6])

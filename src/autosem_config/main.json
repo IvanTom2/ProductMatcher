@@ -3,10 +3,11 @@
     "measures": [
         {
             "measure_name": "Объем",
-            "merge_mode": "1",
+            "merge_mode": "overall",
             "measure_data": {
                 "common_prefix": "",
                 "common_postfix": "",
+                "common_max_count": 1,
                 "features": [
                     {
                         "feature_name": "Миллилитр",
@@ -14,7 +15,8 @@
                         "relative_weight": 0.001,
                         "prefix": "",
                         "postfix": "",
-                        "search_mode": "post"
+                        "max_count": 1,
+                        "search_mode": "behind"
                     },
                     {
                         "feature_name": "Литр",
@@ -22,17 +24,19 @@
                         "relative_weight": 1,
                         "prefix": "",
                         "postfix": "",
-                        "search_mode": "post"
+                        "max_count": 1,
+                        "search_mode": "behind"
                     }
                 ]
             }
         },
         {
             "measure_name": "Вес",
-            "merge_mode": "1",
+            "merge_mode": "overall",
             "measure_data": {
                 "common_prefix": "",
                 "common_postfix": "",
+                "common_max_count": 1,
                 "features": [
                     {
                         "feature_name": "Микрограмм",
@@ -40,7 +44,8 @@
                         "relative_weight": 0.000000001,
                         "prefix": "",
                         "postfix": "",
-                        "search_mode": "post"
+                        "max_count": 1,
+                        "search_mode": "behind"
                     },
                     {
                         "feature_name": "Миллиграмм",
@@ -48,7 +53,8 @@
                         "relative_weight": 0.000001,
                         "prefix": "",
                         "postfix": "",
-                        "search_mode": "post"
+                        "max_count": 1,
+                        "search_mode": "behind"
                     },
                     {
                         "feature_name": "Грамм",
@@ -56,7 +62,8 @@
                         "relative_weight": 0.001,
                         "prefix": "",
                         "postfix": "",
-                        "search_mode": "post"
+                        "max_count": 1,
+                        "search_mode": "behind"
                     },
                     {
                         "feature_name": "Килограмм",
@@ -64,7 +71,37 @@
                         "relative_weight": 1,
                         "prefix": "",
                         "postfix": "",
-                        "search_mode": "post"
+                        "max_count": 1,
+                        "search_mode": "behind"
+                    }
+                ]
+            }
+        },
+        {
+            "measure_name": "Количество",
+            "merge_mode": "overall",
+            "measure_data": {
+                "common_prefix": "",
+                "common_postfix": "",
+                "common_max_count": 1,
+                "features": [
+                    {
+                        "feature_name": "Штуки",
+                        "defenition": "шт|уп|пач",
+                        "relative_weight": 1,
+                        "prefix": "",
+                        "postfix": "",
+                        "max_count": 1,
+                        "search_mode": "behind"
+                    },
+                    {
+                        "feature_name": "Номера",
+                        "defenition": "№|\\sn|\\s[xх]",
+                        "relative_weight": 1,
+                        "prefix": "",
+                        "postfix": "",
+                        "max_count": 1,
+                        "search_mode": "front"
                     }
                 ]
             }
