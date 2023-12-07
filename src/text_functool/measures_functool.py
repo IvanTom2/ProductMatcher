@@ -264,7 +264,7 @@ class Measures(object):
 
     """
 
-    __PATH = Path(__file__).parent.parent.parent / "autosem_config"
+    __PATH = Path(__file__).parent.parent / "autosem_config"
 
     def __init__(
         self,
