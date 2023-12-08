@@ -4,6 +4,7 @@
         {
             "measure_name": "Объем",
             "merge_mode": "overall",
+            "use_it": true,
             "measure_data": {
                 "common_prefix": "",
                 "common_postfix": "",
@@ -16,7 +17,8 @@
                         "prefix": "",
                         "postfix": "",
                         "max_count": 1,
-                        "search_mode": "behind"
+                        "search_mode": "behind",
+                        "use_it": true
                     },
                     {
                         "feature_name": "Литр",
@@ -25,7 +27,8 @@
                         "prefix": "",
                         "postfix": "",
                         "max_count": 1,
-                        "search_mode": "behind"
+                        "search_mode": "behind",
+                        "use_it": true
                     }
                 ]
             }
@@ -33,6 +36,7 @@
         {
             "measure_name": "Вес",
             "merge_mode": "overall",
+            "use_it": true,
             "measure_data": {
                 "common_prefix": "",
                 "common_postfix": "",
@@ -45,7 +49,8 @@
                         "prefix": "",
                         "postfix": "",
                         "max_count": 1,
-                        "search_mode": "behind"
+                        "search_mode": "behind",
+                        "use_it": true
                     },
                     {
                         "feature_name": "Миллиграмм",
@@ -54,7 +59,8 @@
                         "prefix": "",
                         "postfix": "",
                         "max_count": 1,
-                        "search_mode": "behind"
+                        "search_mode": "behind",
+                        "use_it": true
                     },
                     {
                         "feature_name": "Грамм",
@@ -63,7 +69,8 @@
                         "prefix": "",
                         "postfix": "",
                         "max_count": 1,
-                        "search_mode": "behind"
+                        "search_mode": "behind",
+                        "use_it": true
                     },
                     {
                         "feature_name": "Килограмм",
@@ -72,7 +79,8 @@
                         "prefix": "",
                         "postfix": "",
                         "max_count": 1,
-                        "search_mode": "behind"
+                        "search_mode": "behind",
+                        "use_it": true
                     }
                 ]
             }
@@ -80,6 +88,7 @@
         {
             "measure_name": "Количество",
             "merge_mode": "overall",
+            "use_it": true,
             "measure_data": {
                 "common_prefix": "",
                 "common_postfix": "",
@@ -92,7 +101,8 @@
                         "prefix": "",
                         "postfix": "",
                         "max_count": 1,
-                        "search_mode": "behind"
+                        "search_mode": "behind",
+                        "use_it": true
                     },
                     {
                         "feature_name": "Номера",
@@ -101,7 +111,8 @@
                         "prefix": "",
                         "postfix": "",
                         "max_count": 1,
-                        "search_mode": "front"
+                        "search_mode": "front",
+                        "use_it": true
                     }
                 ]
             }

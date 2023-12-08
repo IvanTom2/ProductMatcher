@@ -7,6 +7,7 @@ class MEASURE(object):
     NAME = "measure_name"
     MERGE_MODE = "merge_mode"
     DATA = "measure_data"
+    USE_IT = "use_it"
 
 
 class DATA(object):
@@ -24,6 +25,7 @@ class FEATURE(object):
     POSTFIX = "postfix"
     MAX_COUNT = "max_count"
     SEARCH_MODE = "search_mode"
+    USE_IT = "use_it"
 
 
 if __name__ == "__main__":

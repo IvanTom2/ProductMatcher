@@ -262,14 +262,15 @@ class Measure(object):
 
         features = []
         for feature_data in measure_data[DATA.FEATURES]:
-            features.append(
-                MeasureFeature(
-                    feature_data,
-                    common_prefix,
-                    common_postfix,
-                    common_max_count,
+            if feature_data[FEATURE.USE_IT]:
+                features.append(
+                    MeasureFeature(
+                        feature_data,
+                        common_prefix,
+                        common_postfix,
+                        common_max_count,
+                    )
                 )
-            )
 
         return features
 
@@ -342,8 +343,8 @@ class Measures(object):
         self._config_path = self.__PATH / f"{config_name}.json"
         config = self._read_config()
 
-        self.measures_names = self._extract_measures_names(config)
         self.measures = self._create_measures(config)
+        self.measures_names = list(self.measures.keys())
 
         self.used_feature_names = []
 
@@ -385,27 +386,19 @@ class Measures(object):
             rules = file.read()
         return json.loads(rules)
 
-    def _extract_measures_names(self, config: dict) -> list[str]:
-        """Extracts measures names from config file (not features names)"""
-
-        measures = []
-        measures_records = config[CONFIG.MEASURES]
-        for mrecord in measures_records:
-            if MEASURE.NAME in mrecord:
-                measures.append(mrecord[MEASURE.NAME])
-        return measures
-
     def _create_measures(self, config: dict) -> dict[str, Measure]:
         """Parse config and create dict with Measure objects
         accorging to parsed rules"""
 
         measures_list = {}
-        for measure in config[CONFIG.MEASURES]:
-            measures_list[measure[MEASURE.NAME]] = Measure(
-                measure[MEASURE.NAME],
-                measure[MEASURE.MERGE_MODE],
-                measure[MEASURE.DATA],
-            )
+        for measure_record in config[CONFIG.MEASURES]:
+            if MEASURE.NAME in measure_record:
+                if measure_record[MEASURE.USE_IT]:
+                    measures_list[measure_record[MEASURE.NAME]] = Measure(
+                        measure_record[MEASURE.NAME],
+                        measure_record[MEASURE.MERGE_MODE],
+                        measure_record[MEASURE.DATA],
+                    )
 
         return measures_list
 
@@ -471,8 +464,8 @@ if __name__ == "__main__":
     data = measures.extract_all(data, "name")
     data = measures.concat_regex(data, True)
 
-    # print(data.at[6, "regex"])
-    # print(data)
+    print(data.at[6, "regex"])
+    print(data)
 
-    check = measures.extract_measure(data, "name", "Количество")
-    print(check[6])
+    # check = measures.extract_measure(data, "name", "Количество")
+    # print(check[6])
