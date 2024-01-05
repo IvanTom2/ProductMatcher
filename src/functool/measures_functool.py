@@ -3,17 +3,16 @@ from typing import Any
 import pandas as pd
 import json
 from pathlib import Path
-from abc import ABC
 import sys
 from decimal import Decimal
 from collections import namedtuple
 from typing import Union
-from enum import Enum
 
-sys.path.append(str(Path(__file__).parent.parent))
-sys.path.append(str(Path(__file__).parent.parent.parent))
+SRC_DIR = Path(__file__).parent.parent
+PROJECT_DIR = SRC_DIR.parent
 
-from autosem_config.config_parser import CONFIG, MEASURE, DATA, FEATURE
+sys.path.append(str(PROJECT_DIR))
+from config.autosem_config.config_parser import CONFIG, MEASURE, DATA, FEATURE
 
 
 class SearchMode(object):
@@ -47,6 +46,15 @@ class MergeMode(object):
         return mode
 
 
+class CommonValues(object):
+    COMMON = "common"
+
+    def is_common(self, value: Union[int, str]) -> bool:
+        if value == self.COMMON:
+            return True
+        return False
+
+
 class AbstractMeasureFeature(object):
     name: str
     defenition: str
@@ -63,8 +71,10 @@ class MeasureFeature(AbstractMeasureFeature):
         common_prefix: str,
         common_postfix: str,
         common_max_count: str,
+        special_value_search: str,
     ) -> None:
         FD = feature_data
+        CV = CommonValues()
 
         self.name = FD[FEATURE.NAME]
         self.defenition = FD[FEATURE.DEFENITION]
@@ -75,13 +85,26 @@ class MeasureFeature(AbstractMeasureFeature):
             if FEATURE.SEARCH_MODE in FD
             else SearchMode.default
         )
-        self.prefix = FD[FEATURE.PREFIX] if FEATURE.PREFIX in FD else common_prefix
-        self.postfix = FD[FEATURE.POSTFIX] if FEATURE.POSTFIX in FD else common_postfix
-        self.max_count = (
-            FD[FEATURE.MAX_COUNT] if FEATURE.MAX_COUNT in FD else common_max_count
+
+        self.prefix = (
+            FD[FEATURE.PREFIX]
+            if not CV.is_common(FD[FEATURE.PREFIX])
+            else common_prefix
         )
 
-        self._search_rx = self._make_search_rx()
+        self.postfix = (
+            FD[FEATURE.POSTFIX]
+            if not CV.is_common(FD[FEATURE.POSTFIX])
+            else common_postfix
+        )
+
+        self.max_count = (
+            FD[FEATURE.MAX_COUNT]
+            if not CV.is_common(FD[FEATURE.MAX_COUNT])
+            else common_max_count
+        )
+
+        self._search_rx = self._make_search_rx(special_value_search)
         self.allocated_features = [self]
 
     def __eq__(self, __value: object) -> bool:
@@ -93,11 +116,17 @@ class MeasureFeature(AbstractMeasureFeature):
         else:
             return False
 
-    def _make_search_rx(self) -> str:
+    def _make_search_rx(self, special_value_search: str) -> str:
+        DVS = "\d*[.,]?\d+"  # default value search
+        vsrch = DVS
+
+        if special_value_search:
+            vsrch = special_value_search
+
         if self.search_mode == SearchMode.BEHIND:
-            rx = rf"\d*[.,]?\d+\s*(?:{self.defenition})"
+            rx = rf"{vsrch}\s*(?:{self.defenition})"
         else:
-            rx = rf"(?:{self.defenition})\s*\d*[.,]?\d+"
+            rx = rf"(?:{self.defenition})\s*{vsrch}"
 
         return rx
 
@@ -259,6 +288,7 @@ class Measure(object):
         common_prefix = measure_data[DATA.COMMON_PREFIX]
         common_postfix = measure_data[DATA.COMMON_POSTFIX]
         common_max_count = measure_data[DATA.COMMON_MAX_COUNT]
+        special_value_search = measure_data[DATA.SPECIAL_VALUE_SEARCH]
 
         features = []
         for feature_data in measure_data[DATA.FEATURES]:
@@ -269,6 +299,7 @@ class Measure(object):
                         common_prefix,
                         common_postfix,
                         common_max_count,
+                        special_value_search,
                     )
                 )
 
@@ -332,17 +363,7 @@ class Measures(object):
 
     """
 
-    __PATH = Path(__file__).parent.parent / "autosem_config"
-
-    def __init__(
-        self,
-        config_name: str = "main",
-    ) -> None:
-        self.name = config_name
-
-        self._config_path = self.__PATH / f"{config_name}.json"
-        config = self._read_config()
-
+    def __init__(self, config: dict) -> None:
         self.measures = self._create_measures(config)
         self.measures_names = list(self.measures.keys())
 
@@ -378,13 +399,6 @@ class Measures(object):
                 return self.measures[subscript]
             else:
                 raise KeyError
-
-    def _read_config(self) -> dict:
-        """Returns config file like dict object"""
-
-        with open(self._config_path, "rb") as file:
-            rules = file.read()
-        return json.loads(rules)
 
     def _create_measures(self, config: dict) -> dict[str, Measure]:
         """Parse config and create dict with Measure objects
@@ -458,14 +472,20 @@ if __name__ == "__main__":
     data.at[3, "name"] = "Сок 1л"
     data.at[4, "name"] = "Пиво 500мл 600мл"
     data.at[5, "name"] = "Бананы 10шт"
+    data.at[6, "name"] = "Аспирин 10шт"
     data.at[6, "name"] = "Аспирин №10"
+    data.at[7, "name"] = "Аспирин №1"
+    data.at[8, "name"] = "Аспирин 1шт"
 
-    measures = Measures("main")
+    measures = Measures(
+        "/home/mainus/Projects/ProductMatcher/config/autosem_config/setups",
+        "main",
+    )
     data = measures.extract_all(data, "name")
     data = measures.concat_regex(data, True)
 
-    print(data.at[6, "regex"])
     print(data)
-
-    # check = measures.extract_measure(data, "name", "Количество")
-    # print(check[6])
+    print(data.at[0, "regex"])
+    print(data.at[1, "regex"])
+    print(data.at[2, "regex"])
+    print(data.at[3, "regex"])

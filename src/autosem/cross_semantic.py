@@ -224,6 +224,7 @@ class CrosserPro(Crosser):
         print("Извелечение слов по кросс-семантике")
 
     def extract(self, data: pd.DataFrame, col: str):
+        resort_by_index = False
         self._show_status()
 
         data = self._setup(data)
@@ -231,6 +232,7 @@ class CrosserPro(Crosser):
         data = self.get_tokens_pro(data, "row", self.extractors)
 
         if self.process_nearest:
+            resort_by_index = True
             data = data.sort_values(by=[col])
 
         indexes = list(data.index)
@@ -238,7 +240,7 @@ class CrosserPro(Crosser):
             index = indexes[pos_index]
             current_set = data.at[index, "tokens"]
 
-            rest_indexes = indexes[:]  # or use copy.copy(indexess)
+            rest_indexes = indexes[:]  # or use copy.copy(indexes)
             if self.process_nearest:
                 rest_indexes = indexes[
                     max(0, pos_index - self.process_nearest) : min(
@@ -263,5 +265,11 @@ class CrosserPro(Crosser):
 
         data = self._to_list(data)
         data = self._join(data)
+
         data.drop("tokens", axis=1, inplace=True)
+        data.drop("row", axis=1, inplace=True)
+
+        if resort_by_index:
+            data = data.sort_index()
+
         return data

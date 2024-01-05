@@ -80,21 +80,22 @@ class Languages(Language):
 
 class LanguageRules(object):
     """
-    Rules of words extracting:
-    - language - extracting language
-    - rule_name - name of rule (will be used as returning column name)
-    - startUpper - word should start with capital letter
-    - onlyUpper - word should contains only capital letters
-    - check_letters - check if word contains letters (wouldn't extract only numbers)
-    - symbols - extra symbols which the word can contains
-    - word_boundary - boundary of the word \\b (left and right)
-    - custom_boundary - custom boundary of the word (left and right)
-    - with_numbers - allow extract word which contains numbers
-    - min_lenght - min lenght of the word (included)
-    - max_words - max count of extracted words (included)
-    - stemming - apply stemming to extracted words
-    - join_words - apply words joining
-    - joiner - symbol for words joining
+    Parameters
+    ----------
+    language : extracting language
+    rule_name : name of rule (will be used as returning column name)
+    startUpper : word should start with capital letter
+    onlyUpper : word should contains only capital letters
+    check_letters : check if word contains letters (wouldn't extract only numbers)
+    symbols : extra symbols which the word can contains
+    word_boundary : boundary of the word \\b (left and right)
+    custom_boundary : custom boundary of the word (left and right)
+    with_numbers : allow extract word which contains numbers
+    min_lenght : min lenght of the word (included)
+    max_words : max count of extracted words (included)
+    stemming : apply stemming to extracted words
+    join_words : apply words joining
+    joiner : symbol for words joining
     """
 
     def __init__(

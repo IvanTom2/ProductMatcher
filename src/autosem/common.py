@@ -8,15 +8,14 @@ from abc import ABC, abstractmethod
 sys.path.append(str(Path(__file__).parent.parent))
 sys.path.append(str(Path(__file__).parent.parent.parent))
 
-from text_functool.counts_functool import CountFuncTool, CountNumeroFuncTool
-from text_functool.cross_semantic_functool import BasicCrosser
-from text_functool.words_functool import (
+from functool.measures_functool import SearchMode, MergeMode, Measures
+from functool.cross_semantic_functool import BasicCrosser
+from functool.words_functool import (
     LanguageRules,
     Language,
     Languages,
     WordsFuncTool,
 )
-from text_functool.measures_functool import AutosemRules, MeasureFeature, Measure
 
 
 class Extractor(ABC):
@@ -50,4 +49,5 @@ def del_rx(data: pd.DataFrame, col: str) -> pd.DataFrame:
     data = parse_rx(data)
 
     data = data.apply(_del, axis=1)
+    data.drop("rx_to_del", axis=1, inplace=True)
     return data

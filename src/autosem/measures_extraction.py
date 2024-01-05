@@ -11,49 +11,71 @@ sys.path.append(str(Path(__file__).parent))
 
 
 from common import Extractor
-from common import AutosemRules, MeasureFeature, Measure
+from common import Measures
 
 
 class MeasureExtractor(Extractor):
     def __init__(
         self,
-        max_values: int = 0,
-        add_space: bool = True,
-    ):
-        pass
+        config_path: str | Path,
+        add_spaces: bool = True,
+    ) -> None:
+        self._add_spaces_flag = add_spaces
+        config = self._read_config(config_path)
+        self.enginge = Measures(config)
 
-    def _get_measures(self):
-        if self.mode == "triplet":
-            return Measures(self.measure_data).makeTriplets()
-        elif self.mode == "overall":
-            return Measures(self.measure_data).makeOverall()
+    def _add_spaces(self, series: pd.Series) -> pd.Series:
+        return "  " + series + "  " if self._add_spaces_flag else series
 
-    def _add_space(self, series: pd.Series) -> pd.Series:
-        return series + " " if self.add_space else series
+    def _del_spaces(self, series: pd.Series) -> pd.Series:
+        return series.str.strip()
 
-    def _show_status(self):
-        print("Извлекаю характеристики типа:", self._name)
+    def _read_config(self, config_path: str | Path) -> dict:
+        """Returns config file like dict object"""
 
-    def extract(self, data: pd.DataFrame, col: str) -> pd.DataFrame:
-        """
-        return dataframe with extra columns which depend of
-        name of the measures (from MeasuresData attribute)
-        """
-        self._show_status()
+        with open(config_path, "rb") as file:
+            rules = file.read()
+        return json.loads(rules)
 
-        _data = self._add_space(data[col])
-        measures = self._get_measures()
+    def extract(
+        self,
+        data: pd.DataFrame,
+        column: str,
+        measure_name: str,
+    ) -> pd.Series:
+        data[column] = data[column].astype(str)
 
-        for measure in measures:
-            measureValues = self.tool.extractMeasureValues(
-                _data,
-                measure,
-                max_values=self.max_values,
-            )
+        data[column] = self._add_spaces(data[column])
+        output = self.enginge.extract_measure(data, column, measure_name)
+        data[column] = self._del_spaces(data[column])
+        return output
 
-            regex = self.tool.createMeasureRX(measureValues, measure)
-            data = pd.concat([data, regex], axis=1)
 
+class MeasuresExtractor(MeasureExtractor):
+    def __init__(
+        self,
+        config_path: str | Path,
+        add_spaces: bool = True,
+    ) -> None:
+        super().__init__(config_path, add_spaces)
+
+    def extract(
+        self,
+        data: pd.DataFrame,
+        column: str,
+        delete_features_columns: bool = False,
+        concat_regex: bool = True,
+    ) -> pd.DataFrame:
+        data[column] = self._add_spaces(data[column])
+
+        data = self.enginge.extract_all(data, column)
+        data = (
+            self.enginge.concat_regex(data, delete_features_columns)
+            if concat_regex
+            else data
+        )
+
+        data[column] = self._del_spaces(data[column])
         return data
 
 
@@ -210,4 +232,22 @@ class SizeExtractor(Extractor):
 if __name__ == "__main__":
     data = pd.DataFrame()
     data.at[0, "name"] = "Апельсины 100гр"
-    data.at[1, "name"] = "Апельсины 1000кг"
+    data.at[1, "name"] = "Апельсины 10кг"
+    data.at[2, "name"] = "Вода 1000мл 40мл"
+    data.at[3, "name"] = "Сок 1л"
+    data.at[4, "name"] = "Пиво 500мл 600мл"
+    data.at[5, "name"] = "Бананы 10шт"
+    data.at[6, "name"] = "Аспирин №10"
+
+    mExtractor = MeasureExtractor(
+        "/home/mainus/Projects/ProductMatcher/config/autosem_config/setups/main.json"
+    )
+    mAllExtractor = MeasuresExtractor(
+        "/home/mainus/Projects/ProductMatcher/config/autosem_config/setups/main.json"
+    )
+
+    series = mExtractor.extract(data, "name", "Количество")
+    print(series)
+
+    data = mAllExtractor.extract(data, "name", True)
+    print(data)
