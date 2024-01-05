@@ -3,4 +3,4 @@ Brandpol_Validator/*
 .venv
 __pycache__
 */__pycache__/*
-
+*.xlsx
