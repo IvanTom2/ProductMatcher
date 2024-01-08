@@ -1,4 +1,5 @@
 import sys
+import time
 import pandas as pd
 
 from pathlib import Path
@@ -27,7 +28,7 @@ from src.autosem.cross_semantic import CrosserPro, LanguageRules
 class AutosemProcessRunner(object):
     def __init__(
         self,
-        config_path: str | Path,
+        config: str | Path,
         data_path: str | Path,
         column: str,
         cross_sem_langs: list[str] = ["ru", "eng"],
@@ -35,7 +36,7 @@ class AutosemProcessRunner(object):
         self.data_path = data_path
         self.column = column
 
-        self.extractor = MeasuresExtractor(config_path, True)
+        self.extractor = MeasuresExtractor(config, True)
 
         crosser_lang_rules = self.setup_crosser_lang_rules(cross_sem_langs)
         self.crosser = CrosserPro(
@@ -104,25 +105,26 @@ class AutosemWidget(CommonGUI):
 
         self.workfile_lay = self._setup_workfile_layout(main_layout)
         self.config_lay = self._setup_config_layout(main_layout)
-        self.workcol_display = self._setup_runner(main_layout)
         self.cross_sem_langs = self._setup_cross_sem(main_layout)
+        self.workcol_display = self._setup_runner(main_layout)
         self.table_lay = self._setup_table_view(main_layout)
 
     def _setup_runner(self, main_layout: QVBoxLayout) -> None:
-        runner_layout = QHBoxLayout()
-
+        workcol_layout = QHBoxLayout()
         workcol_label = QLabel("Столбец для обработки")
         self.workcol_display = QLineEdit("Название клиента")
+        workcol_layout.addWidget(workcol_label)
+        workcol_layout.addWidget(self.workcol_display)
 
+        runner_layout = QHBoxLayout()
         run_button = QPushButton("Начать обработку")
         run_button.clicked.connect(self.run)
-
-        runner_layout.addWidget(workcol_label)
-        runner_layout.addWidget(self.workcol_display)
         runner_layout.addWidget(run_button)
 
+        main_layout.addLayout(workcol_layout)
         main_layout.addLayout(runner_layout)
 
+        self.run_button = run_button
         return self.workcol_display
 
     def _setup_cross_sem(self, main_layout: QVBoxLayout) -> list[QCheckBox]:
@@ -147,7 +149,10 @@ class AutosemWidget(CommonGUI):
         return cross_sem_langs
 
     def run(self):
+        self.run_button.setText("Обрабатывается...")
+
         config_path = self.CONFIG_PATH / self.config_combobox.currentText()
+        config = self.read_config(config_path)
 
         cross_sem_langs = []
         for lang in self.cross_sem_langs:
@@ -155,13 +160,14 @@ class AutosemWidget(CommonGUI):
                 cross_sem_langs.append(lang.text())
 
         extractor = AutosemProcessRunner(
-            config_path,
+            config,
             self.file_path_display.text(),
             self.workcol_display.text(),
             cross_sem_langs,
         )
 
         extractor.run()
+        self.run_button.setText("Начать обработку")
 
 
 if __name__ == "__main__":

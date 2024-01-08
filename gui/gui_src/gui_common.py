@@ -455,3 +455,8 @@ class CommonGUI(QWidget):
             self.update_config_combobox,
         )
         config_viewer_dialog.exec()
+
+    def read_config(self, path: str | Path) -> dict:
+        with open(path, "rb") as file:
+            data = json.loads(file.read())
+        return data

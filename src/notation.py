@@ -149,7 +149,7 @@ class FEATURES(NOTATION):
     INTERMEDIATE_VALIDATION = "intermediate_validation"
 
     STATUS = "Валидация по текстовым признакам"
-    VALIDATED = "TF validation"
+    VALIDATED = "features validation"
     NOT_FOUND = "TF not found"
 
     @classmethod
@@ -173,4 +173,4 @@ class JAKKAR(NOTATION):
     SOURCE_TOKENS_COUNT = "source_tokens_count"
 
     RATIO_PATH = r"ratio.xlsx"
-    VALIDATED = "FJ validation"
+    VALIDATED = "fuzzy validation"

@@ -263,11 +263,6 @@ class FeatureGenerator(object):
 
         return default_features
 
-    def read_config(self, path: str | Path) -> dict:
-        with open(path, "rb") as file:
-            data = json.loads(file.read())
-        return data
-
     def generate(self, config: dict) -> list[AbstractTextFeature]:
         """Parse config and create dict with Measure objects
         accorging to parsed rules"""
@@ -277,12 +272,3 @@ class FeatureGenerator(object):
         features_list.extend(self._generate_complex(config))
 
         return features_list
-
-
-path = "/home/mainus/Projects/ProductMatcher/config/measures_config/setups/main.json"
-feature_generator = FeatureGenerator()
-config = feature_generator.read_config(path)
-
-
-if __name__ == "__main__":
-    features = feature_generator.generate(config)

@@ -13,7 +13,7 @@ tqdm.pandas()
 sys.path.append(str(Path(__file__).parent.parent))
 
 from notation import FEATURES
-from src.feature_v.feature_generator import FeatureGenerator, config
+from src.feature_v.feature_generator import FeatureGenerator
 from src.feature_v.feature_functool import (
     AbstractTextFeature,
     TextFeatureUnit,
@@ -193,6 +193,8 @@ class TextFeatureValidator(AbstractTextFeatureValidator):
         data = self._extract(data)
         data = self._data_clean(data)
 
+        print("DONE")
+
         return data
 
 
@@ -224,6 +226,7 @@ if __name__ == "__main__":
         "Таблетка 10г/мл",
     ]
 
+    config = {}
     features = FeatureGenerator().generate(config)
 
     validator = TextFeatureValidator(

@@ -17,11 +17,10 @@ from common import Measures
 class MeasureExtractor(Extractor):
     def __init__(
         self,
-        config_path: str | Path,
+        config: dict,
         add_spaces: bool = True,
     ) -> None:
         self._add_spaces_flag = add_spaces
-        config = self._read_config(config_path)
         self.enginge = Measures(config)
 
     def _add_spaces(self, series: pd.Series) -> pd.Series:
@@ -54,10 +53,10 @@ class MeasureExtractor(Extractor):
 class MeasuresExtractor(MeasureExtractor):
     def __init__(
         self,
-        config_path: str | Path,
+        config: dict,
         add_spaces: bool = True,
     ) -> None:
-        super().__init__(config_path, add_spaces)
+        super().__init__(config, add_spaces)
 
     def extract(
         self,

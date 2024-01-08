@@ -24,7 +24,7 @@ from src.feature_v.feature_validator import FeatureGenerator, TextFeatureValidat
 class FeatureValidatorProcessRunner(object):
     def __init__(
         self,
-        config_path: str | Path,
+        config: dict,
         data_path: str | Path,
         client_column: str,
         source_column: str,
@@ -32,7 +32,6 @@ class FeatureValidatorProcessRunner(object):
         self.data_path = data_path
 
         self.feature_generator = FeatureGenerator()
-        config = self.feature_generator.read_config(config_path)
         features = self.feature_generator.generate(config)
 
         self.validator = TextFeatureValidator(
@@ -75,13 +74,13 @@ class FeatureValidatorWidget(CommonGUI):
 
         client_box = QHBoxLayout()
         client_col_label = QLabel("Столбец названий клиента")
-        self.client_col_display = QLineEdit("Название клиента")
+        self.client_col_display = QLineEdit("Название товара клиента")
         client_box.addWidget(client_col_label)
         client_box.addWidget(self.client_col_display)
 
         source_box = QHBoxLayout()
         source_col_label = QLabel("Столбец названий источника")
-        self.source_col_display = QLineEdit("Сырые данные")
+        self.source_col_display = QLineEdit("Строка валидации")
         source_box.addWidget(source_col_label)
         source_box.addWidget(self.source_col_display)
 
@@ -96,9 +95,10 @@ class FeatureValidatorWidget(CommonGUI):
 
     def run(self):
         config_path = self.CONFIG_PATH / self.config_combobox.currentText()
+        config = self.read_config(config_path)
 
         validator = FeatureValidatorProcessRunner(
-            config_path,
+            config,
             self.file_path_display.text(),
             self.client_col_display.text(),
             self.source_col_display.text(),
