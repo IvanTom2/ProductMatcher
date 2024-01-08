@@ -25,8 +25,8 @@ sys.path.append(str(PROJECT_DIR))
 sys.path.append(str(GUI_SRC))
 
 from gui_src.gui_autosem import AutosemWidget, AUTOSEM_CONFIG_PATH
-from gui_src.gui_feature_validator import FeatureValidatorWidget
-from gui_src.gui_fuzzy_validator import FuzzyValidatorWidget
+from gui.gui_src.gui_feature_v import FeatureValidatorWidget
+from gui.gui_src.gui_fuzzy_v import FuzzyValidatorWidget
 
 
 class MainWindow(QMainWindow):

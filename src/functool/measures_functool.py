@@ -7,12 +7,19 @@ import sys
 from decimal import Decimal
 from collections import namedtuple
 from typing import Union
+from abc import abstractmethod
 
 SRC_DIR = Path(__file__).parent.parent
 PROJECT_DIR = SRC_DIR.parent
 
 sys.path.append(str(PROJECT_DIR))
-from config.autosem_config.config_parser import CONFIG, MEASURE, DATA, FEATURE
+from config.measures_config.config_parser import (
+    CONFIG,
+    MEASURE,
+    DATA,
+    FEATURE,
+    AUTOSEM_CONF,
+)
 
 
 class SearchMode(object):
@@ -34,6 +41,7 @@ class MergeMode(object):
     NONE = "none"
     OVERALL = "overall"
     modes = {OVERALL, NONE}
+    # also mode can be presented as number
 
     default = "overall"
 
@@ -107,6 +115,9 @@ class MeasureFeature(AbstractMeasureFeature):
         self._search_rx = self._make_search_rx(special_value_search)
         self.allocated_features = [self]
 
+    def get_search_regex(self)-> str:
+        return self._search_rx
+
     def __eq__(self, __value: object) -> bool:
         if isinstance(__value, self.__class__):
             if self.name == __value.name:
@@ -116,8 +127,12 @@ class MeasureFeature(AbstractMeasureFeature):
         else:
             return False
 
+    @abstractmethod
+    def _default_search(self):
+        pass
+
     def _make_search_rx(self, special_value_search: str) -> str:
-        DVS = "\d*[.,]?\d+"  # default value search
+        DVS = self._default_search()  # default value search
         vsrch = DVS
 
         if special_value_search:
@@ -132,6 +147,72 @@ class MeasureFeature(AbstractMeasureFeature):
 
     def _extract_values(self, string: pd.Series) -> list[str]:
         return re.findall(self._search_rx, string, re.IGNORECASE)
+
+    def extract(
+        self,
+        extract_from: list[str],
+    ) -> list[list[str]]:
+        values = list(map(self._extract_values, extract_from))
+        return values
+
+    def filter_count(
+        self,
+        extracted_values: list[list[str]],
+    ) -> list[list[str]]:
+        if self.max_count != None:
+            extracted_values = list(
+                map(
+                    lambda x: x[: self.max_count],
+                    extracted_values,
+                )
+            )
+
+        return extracted_values
+
+    def add_relative(self, features) -> None:
+        self.allocated_features.extend(features)
+
+    @abstractmethod
+    def transform(
+        self,
+        extracted_values: list[list[str]],
+    ) -> list[list[str]]:
+        pass
+
+    def __repr__(self) -> str:
+        _return = []
+        _return.append(f"name: {self.name}")
+        _return.append(f"defenition: {self.defenition}")
+        _return.append(f"relative_weight: {self.relative_weight}")
+        _return.append(f"prefix: '{self.prefix}'")
+        _return.append(f"postfix: '{self.postfix}'\n")
+        return "\n".join(_return)
+
+
+class StringFeature(MeasureFeature):
+    def _default_search(self):
+        return ""
+
+    def _to_regex(self, values: list[str]) -> list[str]:
+        if values != []:
+            values = [self._search_rx]
+        return values
+
+    def transform(
+        self,
+        extracted_values: list[list[str]],
+    ) -> list[list[str]]:
+        regex_values = map(self._to_regex, extracted_values)
+        regex_values = map(lambda x: "".join(x), regex_values)
+        regex_values = map(lambda x: "(?=.*(" + x + "))", regex_values)
+        regex_values = map(lambda x: x.replace("(?=.*())", ""), regex_values)
+
+        return list(regex_values)
+
+
+class NumericFeature(MeasureFeature):
+    def _default_search(self):
+        return "\d*[.,]?\d+"
 
     def _extract_numeric_values(self, values: list[str]) -> list[str]:
         numeric_values = []
@@ -151,7 +232,7 @@ class MeasureFeature(AbstractMeasureFeature):
                     num = re.sub("\.$", "", num)
         return num
 
-    def _to_regex(self, numeric_values: str) -> str:
+    def _to_regex(self, numeric_values: list[str]) -> list[str]:
         regexes = []
         features: list[AbstractMeasureFeature] = self.allocated_features
 
@@ -196,27 +277,6 @@ class MeasureFeature(AbstractMeasureFeature):
 
         return regexes
 
-    def extract(
-        self,
-        extract_from: list[str],
-    ) -> list[list[str]]:
-        values = list(map(self._extract_values, extract_from))
-        return values
-
-    def filter_count(
-        self,
-        extracted_values: list[list[str]],
-    ) -> list[list[str]]:
-        if self.max_count != None:
-            extracted_values = list(
-                map(
-                    lambda x: x[: self.max_count],
-                    extracted_values,
-                )
-            )
-
-        return extracted_values
-
     def transform(
         self,
         extracted_values: list[list[str]],
@@ -233,17 +293,26 @@ class MeasureFeature(AbstractMeasureFeature):
 
         return list(regex_values)
 
-    def add_relative(self, features) -> None:
-        self.allocated_features.extend(features)
 
-    def __repr__(self) -> str:
-        _return = []
-        _return.append(f"name: {self.name}")
-        _return.append(f"defenition: {self.defenition}")
-        _return.append(f"relative_weight: {self.relative_weight}")
-        _return.append(f"prefix: '{self.prefix}'")
-        _return.append(f"postfix: '{self.postfix}'\n")
-        return "\n".join(_return)
+class FeatureType(object):
+    NUMERIC = "numeric_feature"
+    STRING = "string_feature"
+
+    __mapper = {
+        CONFIG.NUMERIC_MEASURES: NUMERIC,
+        CONFIG.STRING_MEASURES: STRING,
+    }
+
+    __type = {
+        NUMERIC: NumericFeature,
+        STRING: StringFeature,
+    }
+
+    def __init__(self, measure_type: str) -> None:
+        self._type = self.__mapper[measure_type]
+
+    def type(self) -> MeasureFeature:
+        return self.__type[self._type]
 
 
 class Measure(object):
@@ -252,9 +321,11 @@ class Measure(object):
         measure_name: str,
         merge_mode: str,
         measure_data: dict,
+        measure_type: str,
     ) -> None:
         self.name = measure_name
         self.merge_mode = merge_mode
+        self.measure_type = measure_type
 
         self.features = self._create_features(measure_data)
         self._sort_features()
@@ -289,12 +360,15 @@ class Measure(object):
         common_postfix = measure_data[DATA.COMMON_POSTFIX]
         common_max_count = measure_data[DATA.COMMON_MAX_COUNT]
         special_value_search = measure_data[DATA.SPECIAL_VALUE_SEARCH]
+        feature_type = FeatureType(self.measure_type)
 
         features = []
         for feature_data in measure_data[DATA.FEATURES]:
             if feature_data[FEATURE.USE_IT]:
+                type = feature_type.type()
+
                 features.append(
-                    MeasureFeature(
+                    type(
                         feature_data,
                         common_prefix,
                         common_postfix,
@@ -358,8 +432,8 @@ class Measures(object):
 
     Parameters
     ----------
-    config_name : str
-        Name of config file for usage (don't pass path, only filename)
+    config : dict
+        Parsed config file for usage
 
     """
 
@@ -405,14 +479,21 @@ class Measures(object):
         accorging to parsed rules"""
 
         measures_list = {}
-        for measure_record in config[CONFIG.MEASURES]:
-            if MEASURE.NAME in measure_record:
-                if measure_record[MEASURE.USE_IT]:
-                    measures_list[measure_record[MEASURE.NAME]] = Measure(
-                        measure_record[MEASURE.NAME],
-                        measure_record[MEASURE.MERGE_MODE],
-                        measure_record[MEASURE.DATA],
-                    )
+        for MEASURE_TYPE in CONFIG.MEASURE_TYPES:
+            if config[MEASURE_TYPE][CONFIG.USE_IT]:
+                data = config[MEASURE_TYPE]
+
+                for measure_record in data[CONFIG.MEASURES]:
+                    if MEASURE.NAME in measure_record:
+                        autosem_conf = measure_record[MEASURE.AUTOSEM]
+
+                        if autosem_conf[AUTOSEM_CONF.USE_IT]:
+                            measures_list[measure_record[MEASURE.NAME]] = Measure(
+                                measure_record[MEASURE.NAME],
+                                autosem_conf[AUTOSEM_CONF.MERGE_MODE],
+                                measure_record[MEASURE.DATA],
+                                MEASURE_TYPE,
+                            )
 
         return measures_list
 
@@ -464,6 +545,12 @@ class Measures(object):
         return data
 
 
+def read_config(path: str):
+    with open(path, "rb") as file:
+        data = json.loads(file.read())
+    return data
+
+
 if __name__ == "__main__":
     data = pd.DataFrame()
     data.at[0, "name"] = "Апельсины 100гр"
@@ -476,11 +563,16 @@ if __name__ == "__main__":
     data.at[6, "name"] = "Аспирин №10"
     data.at[7, "name"] = "Аспирин №1"
     data.at[8, "name"] = "Аспирин 1шт"
+    data.at[9, "name"] = "Пальто зеленое"
+    data.at[10, "name"] = "Пальто красное"
+    data.at[11, "name"] = "Пальто синее"
+    data.at[12, "name"] = "Пальто красно-синее"
 
-    measures = Measures(
-        "/home/mainus/Projects/ProductMatcher/config/autosem_config/setups",
-        "main",
+    config = read_config(
+        "/home/mainus/Projects/ProductMatcher/config/measures_config/setups/main.json"
     )
+
+    measures = Measures(config)
     data = measures.extract_all(data, "name")
     data = measures.concat_regex(data, True)
 
