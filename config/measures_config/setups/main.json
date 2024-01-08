@@ -1,0 +1,230 @@
+{
+  "config_name": "main",
+  "numeric_measures": {
+    "use_it": true,
+    "measures": [
+      {
+        "measure_name": "Объем",
+        "autosem": {
+          "merge_mode": "1",
+          "use_it": true
+        },
+        "feature_validator": {
+          "use_it": true,
+          "validation_mode": "strict",
+          "not_found_mode": "strict",
+          "priority": 10
+        },
+        "measure_data": {
+          "common_prefix": "",
+          "common_postfix": "",
+          "common_max_count": 1,
+          "special_value_search": null,
+          "features": [
+            {
+              "feature_name": "Миллилитр",
+              "defenition": "мл|миллилитр|ml|milliliter",
+              "relative_weight": 1,
+              "prefix": "",
+              "postfix": "",
+              "max_count": 1,
+              "search_mode": "behind",
+              "use_it": true
+            },
+            {
+              "feature_name": "Литр",
+              "defenition": "литр|л|liter|l",
+              "relative_weight": 1000,
+              "prefix": "",
+              "postfix": "",
+              "max_count": 1,
+              "search_mode": "behind",
+              "use_it": true
+            }
+          ]
+        }
+      },
+      {
+        "measure_name": "Вес",
+        "autosem": {
+          "merge_mode": "1",
+          "use_it": true
+        },
+        "feature_validator": {
+          "use_it": true,
+          "validation_mode": "strict",
+          "not_found_mode": "strict",
+          "priority": 10
+        },
+        "measure_data": {
+          "common_prefix": "",
+          "common_postfix": "",
+          "common_max_count": 1,
+          "special_value_search": null,
+          "features": [
+            {
+              "feature_name": "Микрограмм",
+              "defenition": "мкг|микрограмм|µg|microgram",
+              "relative_weight": 1,
+              "prefix": "",
+              "postfix": "",
+              "max_count": 1,
+              "search_mode": "behind",
+              "use_it": true
+            },
+            {
+              "feature_name": "Миллиграмм",
+              "defenition": "мг|миллиграмм|mg|milligram",
+              "relative_weight": 1000,
+              "prefix": "",
+              "postfix": "",
+              "max_count": 1,
+              "search_mode": "behind",
+              "use_it": true
+            },
+            {
+              "feature_name": "Грамм",
+              "defenition": "г|гр|грамм|g|gram",
+              "relative_weight": 1000000,
+              "prefix": "",
+              "postfix": "",
+              "max_count": 1,
+              "search_mode": "behind",
+              "use_it": true
+            },
+            {
+              "feature_name": "Килограмм",
+              "defenition": "кг|килограмм|kg|kilogram",
+              "relative_weight": 1000000000,
+              "prefix": "",
+              "postfix": "",
+              "max_count": 1,
+              "search_mode": "behind",
+              "use_it": true
+            }
+          ]
+        }
+      },
+      {
+        "measure_name": "Количество",
+        "autosem": {
+          "merge_mode": "1",
+          "use_it": true
+        },
+        "feature_validator": {
+          "use_it": true,
+          "validation_mode": "strict",
+          "not_found_mode": "strict",
+          "priority": 10
+        },
+        "measure_data": {
+          "common_prefix": "",
+          "common_postfix": "",
+          "common_max_count": 1,
+          "special_value_search": "([2-9][,.]?\\d*|[1-9]\\d+[,.]?\\d*)",
+          "features": [
+            {
+              "feature_name": "Штуки",
+              "defenition": "шт|уп|пач",
+              "relative_weight": 1,
+              "prefix": "",
+              "postfix": "",
+              "max_count": 1,
+              "search_mode": "behind",
+              "use_it": true
+            },
+            {
+              "feature_name": "Номера",
+              "defenition": "№|\\sn|\\s[xх]",
+              "relative_weight": 1,
+              "prefix": "",
+              "postfix": "",
+              "max_count": 1,
+              "search_mode": "front",
+              "use_it": true
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "string_measures": {
+    "use_it": true,
+    "measures": [
+      {
+        "measure_name": "Цвет",
+        "autosem": {
+          "use_it": true,
+          "merge_mode": "none"
+        },
+        "feature_validator": {
+          "use_it": true,
+          "validation_mode": "strict",
+          "not_found_mode": "strict",
+          "priority": 10
+        },
+        "measure_data": {
+          "common_prefix": "",
+          "common_postfix": "",
+          "common_max_count": 1,
+          "special_value_search": null,
+          "features": [
+            {
+              "feature_name": "Красный",
+              "defenition": "красн|red",
+              "relative_weight": 1,
+              "prefix": "",
+              "postfix": "",
+              "max_count": 1,
+              "search_mode": "behind",
+              "use_it": true
+            },
+            {
+              "feature_name": "Синий",
+              "defenition": "син|blue",
+              "relative_weight": 1,
+              "prefix": "",
+              "postfix": "",
+              "max_count": 1,
+              "search_mode": "behind",
+              "use_it": true
+            },
+            {
+              "feature_name": "Зеленый",
+              "defenition": "зелен|green",
+              "relative_weight": 1,
+              "prefix": "",
+              "postfix": "",
+              "max_count": 1,
+              "search_mode": "behind",
+              "use_it": true
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "complex_measures": {
+    "use_it": true,
+    "measures": [
+      {
+        "measure_name": "Complex Dimension",
+        "feature_validator": {
+          "use_it": true,
+          "validation_mode": "strict",
+          "not_found_mode": "strict",
+          "priority": 1
+        }
+      },
+      {
+        "measure_name": "Complex Concentration",
+        "feature_validator": {
+          "use_it": true,
+          "validation_mode": "strict",
+          "not_found_mode": "strict",
+          "priority": 2
+        }
+      }
+    ]
+  }
+}
