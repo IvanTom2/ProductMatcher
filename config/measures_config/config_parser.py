@@ -1,3 +1,6 @@
+from enum import Enum
+
+
 class CONFIG(object):
     NAME = "config_name"
     MEASURES = "measures"
@@ -16,6 +19,7 @@ class CONFIG(object):
 
 class AUTOSEM_CONF(object):
     MERGE_MODE = "merge_mode"
+    EXCLUDE_RX = "exclude_rx"
     USE_IT = "use_it"
 
 
@@ -56,5 +60,9 @@ class FEATURE(object):
     USE_IT = "use_it"
 
 
-if __name__ == "__main__":
-    print(MEASURE.AUTOSEM.MERGE_MODE)
+class MEASURE_MAPPER(object):
+    weight = "Вес"
+    volume = "Объем"
+    quantity = "Количество"
+
+    color = "Цвет"

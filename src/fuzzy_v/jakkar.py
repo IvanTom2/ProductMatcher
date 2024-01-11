@@ -6,15 +6,14 @@ from pathlib import Path
 import multiprocessing
 
 
-sys.path.append(str(Path(__file__).parent))
-sys.path.append(str(Path(__file__).parent.parent))
-sys.path.append(str(Path(__file__).parent.parent.parent))
-sys.path.append(str(Path(__file__).parent.parent / "jakkar" / "strmod"))
+SRC_DIR = Path(__file__).parent.parent
+PROJECT_DIR = SRC_DIR.parent
 
+sys.path.append(str(PROJECT_DIR))
 
-from notation import JAKKAR, DATA
+from src.notation import JAKKAR, DATA
 from preprocessing import Preprocessor
-from fuzzy_v.fuzzy_search import FuzzySearch
+from fuzzy_search import FuzzySearch
 from ratio import RateCounter, MarksCounter, MarksMode, RateFunction
 from tokenization import (
     BasicTokenizer,

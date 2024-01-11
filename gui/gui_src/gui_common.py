@@ -32,7 +32,11 @@ from PyQt6.QtCore import (
     QAbstractTableModel,
 )
 
-sys.path.append(str(Path(__file__).parent.parent.parent))
+GUI_DIR = Path(__file__).parent.parent
+PROJECT_DIR = GUI_DIR.parent
+
+sys.path.append(str(GUI_DIR))
+
 from config.measures_config.config_parser import CONFIG, MEASURE, DATA, FEATURE
 
 

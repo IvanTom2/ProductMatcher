@@ -2,6 +2,10 @@ import pandas as pd
 import re
 import copy
 from tqdm import tqdm
+from pathlib import Path
+
+SRC_DIR = Path(__file__).parent.parent
+PROJECT_DIR = SRC_DIR.parent
 
 from common import del_rx, LanguageRules
 from common import BasicCrosser

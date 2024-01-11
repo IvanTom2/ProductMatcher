@@ -1,16 +1,19 @@
 import re
 import sys
+import json
 import pandas as pd
 
 from pathlib import Path
 from abc import ABC, abstractmethod
 
-sys.path.append(str(Path(__file__).parent.parent))
-sys.path.append(str(Path(__file__).parent.parent.parent))
+SRC_DIR = Path(__file__).parent.parent
+PROJECT_DIR = SRC_DIR.parent
 
-from functool.measures_functool import SearchMode, MergeMode, Measures
-from functool.cross_semantic_functool import BasicCrosser
-from functool.words_functool import (
+sys.path.append(str(PROJECT_DIR))
+
+from src.functool.measures_functool import SearchMode, MergeMode, Measures
+from src.functool.cross_semantic_functool import BasicCrosser
+from src.functool.words_functool import (
     LanguageRules,
     Language,
     Languages,
@@ -22,6 +25,12 @@ class Extractor(ABC):
     @abstractmethod
     def extract(self):
         pass
+
+
+def read_config(path: str | Path) -> dict:
+    with open(path, "rb") as file:
+        data = json.loads(file.read())
+    return data
 
 
 def parse_rx(

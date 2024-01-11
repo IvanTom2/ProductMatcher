@@ -5,7 +5,10 @@ from collections import namedtuple
 from decimal import Decimal
 from pathlib import Path
 
-sys.path.append(str(Path(__file__).parent.parent.parent))
+SRC_DIR = Path(__file__).parent.parent
+PROJECT_DIR = SRC_DIR.parent
+
+sys.path.append(str(PROJECT_DIR))
 from src.feature_v.feature_functool import AbstractTextFeature, TextFeatureUnit
 
 

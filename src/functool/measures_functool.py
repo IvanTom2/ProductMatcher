@@ -1,9 +1,10 @@
-import regex as re
-from typing import Any
-import pandas as pd
 import json
-from pathlib import Path
 import sys
+import regex as re
+import pandas as pd
+import numpy as np
+from pathlib import Path
+from typing import Any
 from decimal import Decimal
 from collections import namedtuple
 from typing import Union
@@ -115,7 +116,7 @@ class MeasureFeature(AbstractMeasureFeature):
         self._search_rx = self._make_search_rx(special_value_search)
         self.allocated_features = [self]
 
-    def get_search_regex(self)-> str:
+    def get_search_regex(self) -> str:
         return self._search_rx
 
     def __eq__(self, __value: object) -> bool:
@@ -322,10 +323,12 @@ class Measure(object):
         merge_mode: str,
         measure_data: dict,
         measure_type: str,
+        exclude_rx: bool = False,
     ) -> None:
         self.name = measure_name
         self.merge_mode = merge_mode
         self.measure_type = measure_type
+        self.exclude_rx = exclude_rx
 
         self.features = self._create_features(measure_data)
         self._sort_features()
@@ -407,6 +410,44 @@ class Measure(object):
 
                 feature.add_relative(other_features)
 
+    def _make_exclude_rx(self) -> pd.DataFrame:
+        behind = ""
+        front = ""
+        for feature in self.features:
+            search_mode = feature.search_mode
+            if search_mode == SearchMode.BEHIND:
+                behind += feature.defenition
+            else:
+                front += feature.defenition
+
+        rx = "^(?!.*("
+        if behind:
+            rx += "(?:[0-9][0-9]\d*|[2-9]\d*?)\s*" + "(?:" + behind + ")"
+
+        if front:
+            if behind:
+                rx += "|"
+            rx += "(?:" + front + ")" + "\s*(?:[0-9][0-9]\d*|[2-9]\d*)"
+
+        rx += "))"
+        return rx
+
+    def _add_exclude_rx(
+        self,
+        data: pd.DataFrame,
+        feature_names: list[str],
+        new_feature_name: str,
+    ) -> pd.DataFrame:
+        exclude_rx = self._make_exclude_rx()
+
+        data[new_feature_name] = np.where(
+            data[feature_names].apply(lambda r: r.str.strip().eq("").all(), axis=1),
+            exclude_rx,
+            "",
+        )
+
+        return data
+
     def extract(
         self,
         data: pd.DataFrame,
@@ -422,6 +463,11 @@ class Measure(object):
 
             data[feature.name] = rx_patterns
             feature_names.append(feature.name)
+
+        if self.exclude_rx:
+            new_feature_name = "Исключ. " + self.name
+            data = self._add_exclude_rx(data, feature_names, new_feature_name)
+            feature_names.append(new_feature_name)
 
         return data, feature_names
 
@@ -493,6 +539,7 @@ class Measures(object):
                                 autosem_conf[AUTOSEM_CONF.MERGE_MODE],
                                 measure_record[MEASURE.DATA],
                                 MEASURE_TYPE,
+                                autosem_conf[AUTOSEM_CONF.EXCLUDE_RX],
                             )
 
         return measures_list
@@ -551,7 +598,7 @@ def read_config(path: str):
     return data
 
 
-if __name__ == "__main__":
+def fast_test():
     data = pd.DataFrame()
     data.at[0, "name"] = "Апельсины 100гр"
     data.at[1, "name"] = "Апельсины 10кг"
@@ -581,3 +628,19 @@ if __name__ == "__main__":
     print(data.at[1, "regex"])
     print(data.at[2, "regex"])
     print(data.at[3, "regex"])
+
+
+if __name__ == "__main__":
+    data = pd.DataFrame()
+    data.at[0, "name"] = "Мандарин 10шт"
+    data.at[1, "name"] = "Мандарин 11шт"
+    data.at[2, "name"] = "Мандарин 12шт"
+    data.at[3, "name"] = "Мандарин 1шт"
+
+    config = read_config(
+        "/home/mainus/Projects/ProductMatcher/config/measures_config/setups/main.json"
+    )
+
+    measures = Measures(config)
+    data = measures.extract_all(data, "name")
+    data = measures.concat_regex(data, True)

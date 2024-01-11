@@ -1,12 +1,11 @@
 from abc import ABC, abstractmethod
 import pandas as pd
 from typing import Callable
-
-from tokenization import Token
-
 from collections import Counter
 from itertools import chain
 from math import sqrt, log10
+
+from tokenization import Token
 
 
 class AbstactRateCounter(ABC):

@@ -7,11 +7,13 @@ from pathlib import Path
 import sys
 
 
+PROJECT_DIR = Path(__file__).parent.parent.parent
+SRC_DIR = PROJECT_DIR / "src"
+
 sys.path.append(str(Path(__file__).parent))
 
 
-from common import Extractor
-from common import Measures
+from common import Extractor, Measures, read_config
 
 
 class MeasureExtractor(Extractor):
@@ -230,23 +232,20 @@ class SizeExtractor(Extractor):
 
 if __name__ == "__main__":
     data = pd.DataFrame()
-    data.at[0, "name"] = "Апельсины 100гр"
-    data.at[1, "name"] = "Апельсины 10кг"
-    data.at[2, "name"] = "Вода 1000мл 40мл"
-    data.at[3, "name"] = "Сок 1л"
-    data.at[4, "name"] = "Пиво 500мл 600мл"
-    data.at[5, "name"] = "Бананы 10шт"
-    data.at[6, "name"] = "Аспирин №10"
+    data.at[0, "name"] = "Мандарин 10шт"
+    data.at[1, "name"] = "Мандарин 11шт"
+    data.at[2, "name"] = "Мандарин 12шт"
+    data.at[3, "name"] = "Мандарин 1шт"
 
-    mExtractor = MeasureExtractor(
-        "/home/mainus/Projects/ProductMatcher/config/autosem_config/setups/main.json"
-    )
-    mAllExtractor = MeasuresExtractor(
-        "/home/mainus/Projects/ProductMatcher/config/autosem_config/setups/main.json"
+    config = read_config(
+        "/home/mainus/Projects/ProductMatcher/config/measures_config/setups/main.json"
     )
 
-    series = mExtractor.extract(data, "name", "Количество")
-    print(series)
+    mExtractor = MeasureExtractor(config)
+    mAllExtractor = MeasuresExtractor(config)
+
+    # series = mExtractor.extract(data, "name", "Количество")
+    # print(series)
 
     data = mAllExtractor.extract(data, "name", True)
     print(data)

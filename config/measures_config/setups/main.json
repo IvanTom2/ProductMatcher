@@ -7,6 +7,7 @@
         "measure_name": "Объем",
         "autosem": {
           "merge_mode": "1",
+          "exclude_rx": false,
           "use_it": true
         },
         "feature_validator": {
@@ -23,7 +24,7 @@
           "features": [
             {
               "feature_name": "Миллилитр",
-              "defenition": "мл|миллилитр|ml|milliliter",
+              "defenition": "мл|миллилитр|ml|milliliter|millilitre",
               "relative_weight": 1,
               "prefix": "",
               "postfix": "",
@@ -33,7 +34,7 @@
             },
             {
               "feature_name": "Литр",
-              "defenition": "литр|л|liter|l",
+              "defenition": "литр|л|l|litre|liter",
               "relative_weight": 1000,
               "prefix": "",
               "postfix": "",
@@ -48,6 +49,7 @@
         "measure_name": "Вес",
         "autosem": {
           "merge_mode": "1",
+          "exclude_rx": false,
           "use_it": true
         },
         "feature_validator": {
@@ -64,7 +66,7 @@
           "features": [
             {
               "feature_name": "Микрограмм",
-              "defenition": "мкг|микрограмм|µg|microgram",
+              "defenition": "мкг|микрограмм|µg|ug|microgram",
               "relative_weight": 1,
               "prefix": "",
               "postfix": "",
@@ -109,6 +111,7 @@
         "measure_name": "Количество",
         "autosem": {
           "merge_mode": "1",
+          "exclude_rx": true,
           "use_it": true
         },
         "feature_validator": {
@@ -155,6 +158,7 @@
         "measure_name": "Цвет",
         "autosem": {
           "use_it": true,
+          "exclude_rx": false,
           "merge_mode": "none"
         },
         "feature_validator": {
