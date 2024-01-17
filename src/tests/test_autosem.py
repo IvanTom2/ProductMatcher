@@ -81,8 +81,8 @@ class BaseTestAutosem(object):
                 return False
             return True
 
-        data[REGEX] = extractor.extract(data, CLIENT_PRODUCT, measure_name)
-        data[EMPTY] = data[REGEX].apply(not_empty)
+        data.loc[:, REGEX] = extractor.extract(data, CLIENT_PRODUCT, measure_name)
+        data.loc[:, EMPTY] = data[REGEX].apply(not_empty)
         assert self.uncreation_checkout(data)
 
         # data.to_excel("debug.xlsx", index=False)

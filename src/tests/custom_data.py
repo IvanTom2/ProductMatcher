@@ -108,6 +108,20 @@ class CustomData(object):
         return data
 
 
+class CustomFeatureValidationData(object):
+    @classmethod
+    def get_data(cls) -> pd.DataFrame:
+        data = pd.DataFrame(
+            data=[
+                ("Плитка 10см х 10см", "Плитка 10х10", True),
+                # ("Плитка 10см х 10см", "Плитка 10х10", True),
+            ],
+            columns=[CLIENT_PRODUCT, SOURCE_PRODUCT, IS_EQUAL],
+        )
+
+        return data
+
+
 class CustomUncreationData(object):
     @classmethod
     def uncreation_weight_data(cls) -> pd.DataFrame:

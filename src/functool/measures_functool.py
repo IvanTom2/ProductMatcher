@@ -213,7 +213,7 @@ class StringFeature(MeasureFeature):
 
 class NumericFeature(MeasureFeature):
     def _default_search(self):
-        return "\d*[.,]?\d+"
+        return r"\d*[.,]?\d+"
 
     def _extract_numeric_values(self, values: list[str]) -> list[str]:
         numeric_values = []
@@ -229,10 +229,10 @@ class NumericFeature(MeasureFeature):
             num = f"{num:.20f}"
             if isinstance(num, str):
                 if "." in num:
-                    num = re.sub("0+$", "", num)
-                    num = re.sub("\.$", "", num)
+                    num = re.sub(r"0+$", "", num)
+                    num = re.sub(r"\.$", "", num)
                 if "." in num:
-                    num = re.sub("[.]", "[.,]", num)
+                    num = re.sub(r"[.]", r"[.,]", num)
         return num
 
     def _to_regex(self, numeric_values: list[str]) -> list[str]:
@@ -253,20 +253,20 @@ class NumericFeature(MeasureFeature):
                     rx_part = (
                         feature.prefix
                         + num
-                        + "\s*"
-                        + "(?:"
+                        + r"\s*"
+                        + r"(?:"
                         + feature.defenition
-                        + ")"
+                        + r")"
                         + feature.postfix
                     )
 
                 else:
                     rx_part = (
                         feature.prefix
-                        + "(?:"
+                        + r"(?:"
                         + feature.defenition
                         + ")"
-                        + "\s*"
+                        + r"\s*"
                         + num
                         + feature.postfix
                     )
@@ -420,16 +420,16 @@ class Measure(object):
             else:
                 front += feature.defenition
 
-        rx = "^(?!.*("
+        rx = r"^(?!.*("
         if behind:
-            rx += "(?:[0-9][0-9]\d*|[2-9]\d*?)\s*" + "(?:" + behind + ")"
+            rx += r"(?:[0-9][0-9]\d*|[2-9]\d*?)\s*" + "(?:" + behind + ")"
 
         if front:
             if behind:
                 rx += "|"
-            rx += "(?:" + front + ")" + "\s*(?:[0-9][0-9]\d*|[2-9]\d*)"
+            rx += r"(?:" + front + ")" + r"\s*(?:[0-9][0-9]\d*|[2-9]\d*)"
 
-        rx += "))"
+        rx += r"))"
         return rx
 
     def _add_exclude_rx(
@@ -440,7 +440,7 @@ class Measure(object):
     ) -> pd.DataFrame:
         exclude_rx = self._make_exclude_rx()
 
-        data[new_feature_name] = np.where(
+        data.loc[:, new_feature_name] = np.where(
             data[feature_names].apply(lambda r: r.str.strip().eq("").all(), axis=1),
             exclude_rx,
             "",
@@ -461,7 +461,7 @@ class Measure(object):
             extracted_values = feature.filter_count(extracted_values)
             rx_patterns = feature.transform(extracted_values)
 
-            data[feature.name] = rx_patterns
+            data.loc[:, feature.name] = rx_patterns
             feature_names.append(feature.name)
 
         if self.exclude_rx:

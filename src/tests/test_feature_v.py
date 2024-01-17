@@ -16,6 +16,7 @@ from common_test import (
     IS_EQUAL,
     MEASURES_CONFIG,
 )
+from custom_data import CustomFeatureValidationData
 from src.feature_v.feature_validator import (
     TextFeatureValidator,
     FeatureGenerator,
@@ -43,21 +44,18 @@ class BaseTestFeatureV(object):
 
         return check
 
-    def run_generic(
+    def run_validation_test(
         self,
         data: pd.DataFrame,
         validator: TextFeatureValidator,
     ):
+        print(self.debug)
         data = validator.validate(data)
         assert self.checkout(data)
 
 
 class TestFeatureVGenerics(BaseTestFeatureV):
-    def __init__(self, debug: bool = False) -> None:
-        super().__init__()
-        self.debug = debug
-
-    def test_full_validation(self):
+    def test_generics_feature_validation(self):
         data = pd.concat(
             [
                 NumericDataSet.all(),
@@ -65,12 +63,30 @@ class TestFeatureVGenerics(BaseTestFeatureV):
             ]
         )
 
-        self.run_generic(
+        self.run_validation_test(
             data,
             self.validator(),
         )
 
 
+class TestFeatureVCustom(BaseTestFeatureV):
+    def test_custom_feature_validation(self):
+        data = CustomFeatureValidationData.get_data()
+        self.run_validation_test(data, self.validator())
+
+
+class FeatureVGenericsTestsDebug(TestFeatureVGenerics):
+    def __init__(self) -> None:
+        super().__init__()
+        self.debug = True
+
+
+class FeatureVCustomTestsDebug(TestFeatureVCustom):
+    def __init__(self) -> None:
+        super().__init__()
+        self.debug = True
+
+
 if __name__ == "__main__":
-    test = TestFeatureVGenerics()
-    test.test_full_validation()
+    test = FeatureVCustomTestsDebug()
+    test.test_custom_feature_validation()

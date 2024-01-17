@@ -7,8 +7,6 @@ import re
 import json
 from pathlib import Path
 
-warnings.filterwarnings("ignore")
-
 PROJECT_DIR = Path(__file__).parent.parent.parent
 SRC_DIR = PROJECT_DIR / "src"
 
@@ -46,11 +44,11 @@ class MeasureExtractor(Extractor):
         column: str,
         measure_name: str,
     ) -> pd.Series:
-        data[column] = data[column].astype(str)
+        data.loc[:, column] = data.loc[:, column].astype(str)
 
-        data[column] = self._add_spaces(data[column])
+        data.loc[:, column] = self._add_spaces(data[column])
         output = self.enginge.extract_measure(data, column, measure_name)
-        data[column] = self._del_spaces(data[column])
+        data.loc[:, column] = self._del_spaces(data[column])
         return output
 
 
