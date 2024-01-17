@@ -13,7 +13,6 @@ from common_test import (
     StringDataSet,
     CLIENT_PRODUCT,
     SOURCE_PRODUCT,
-    CHECKOUT,
     IS_EQUAL,
     MEASURES_CONFIG,
 )
@@ -36,9 +35,9 @@ class BaseTestFeatureV(object):
         )
 
     def checkout(self, data: pd.DataFrame) -> bool:
-        check = (data[IS_EQUAL] - data[FEATURES.VALIDATED]).sum() == 0
+        check = (data[IS_EQUAL] != data[FEATURES.VALIDATED]).sum() == 0
         if self.debug:
-            data["DEBUG"] = data[IS_EQUAL] - data[CHECKOUT]
+            data["DEBUG"] = data[IS_EQUAL] - data[FEATURES.VALIDATED]
             data = data[data["DEBUG"] != 0]
             data.to_excel("debug.xlsx", index=False)
 

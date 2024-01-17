@@ -1,4 +1,5 @@
 import sys
+import json
 import warnings
 
 import regex as re
@@ -10,9 +11,13 @@ from pathlib import Path
 from tqdm import tqdm
 
 tqdm.pandas()
-sys.path.append(str(Path(__file__).parent.parent))
 
-from notation import FEATURES
+SRC_DIR = Path(__file__).parent.parent
+PROJ_DIR = SRC_DIR.parent
+
+sys.path.append(str(PROJ_DIR))
+
+from src.notation import FEATURES
 from src.feature_v.feature_generator import FeatureGenerator
 from src.feature_v.feature_functool import (
     AbstractTextFeature,
@@ -144,9 +149,7 @@ class TextFeatureValidator(AbstractTextFeatureValidator):
         self.__not_found_mode = feature.NOT_FOUND_MODE
 
         massive = list(zip(intermediate, cif_massive, sif_massive))
-        desicions = list(
-            map(self._intermediate_validation_func, massive)
-        )  # tqdm(massive)
+        desicions = list(map(self._intermediate_validation_func, tqdm(massive)))
         data[FEATURES.VALIDATED] = desicions
 
         return data
@@ -193,9 +196,13 @@ class TextFeatureValidator(AbstractTextFeatureValidator):
         data = self._extract(data)
         data = self._data_clean(data)
 
-        print("DONE")
-
         return data
+
+
+def read_config(path: str) -> dict:
+    with open(path, "rb") as file:
+        data = json.loads(file.read())
+    return data
 
 
 if __name__ == "__main__":
@@ -226,7 +233,9 @@ if __name__ == "__main__":
         "Таблетка 10г/мл",
     ]
 
-    config = {}
+    config = read_config(
+        "/home/mainus/Projects/ProductMatcher/config/measures_config/setups/main.json"
+    )
     features = FeatureGenerator().generate(config)
 
     validator = TextFeatureValidator(

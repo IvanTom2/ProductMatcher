@@ -17,27 +17,27 @@
           "priority": 10
         },
         "measure_data": {
-          "common_prefix": "",
+          "common_prefix": "[^\\\\\\/а-яa-z0-9]",
           "common_postfix": "",
           "common_max_count": 1,
           "special_value_search": null,
           "features": [
             {
               "feature_name": "Миллилитр",
-              "defenition": "мл|миллилитр|ml|milliliter|millilitre",
+              "defenition": "мл|миллилитр(?:ов)?|ml|milliliters?|millilitres?",
               "relative_weight": 1,
-              "prefix": "",
-              "postfix": "",
+              "prefix": "common",
+              "postfix": "common",
               "max_count": 1,
               "search_mode": "behind",
               "use_it": true
             },
             {
               "feature_name": "Литр",
-              "defenition": "литр|л|l|litre|liter",
+              "defenition": "литр(?:ов)?|л|l|litres?|liters?",
               "relative_weight": 1000,
-              "prefix": "",
-              "postfix": "",
+              "prefix": "common",
+              "postfix": "[^а-яa-z]",
               "max_count": 1,
               "search_mode": "behind",
               "use_it": true
@@ -59,8 +59,8 @@
           "priority": 10
         },
         "measure_data": {
-          "common_prefix": "",
-          "common_postfix": "",
+          "common_prefix": "[^0-9]",
+          "common_postfix": "[^\\\\/]",
           "common_max_count": 1,
           "special_value_search": null,
           "features": [
@@ -68,8 +68,8 @@
               "feature_name": "Микрограмм",
               "defenition": "мкг|микрограмм|µg|ug|microgram",
               "relative_weight": 1,
-              "prefix": "",
-              "postfix": "",
+              "prefix": "common",
+              "postfix": "[^\\\\/a-z]",
               "max_count": 1,
               "search_mode": "behind",
               "use_it": true
@@ -78,18 +78,18 @@
               "feature_name": "Миллиграмм",
               "defenition": "мг|миллиграмм|mg|milligram",
               "relative_weight": 1000,
-              "prefix": "",
-              "postfix": "",
+              "prefix": "common",
+              "postfix": "common",
               "max_count": 1,
               "search_mode": "behind",
               "use_it": true
             },
             {
               "feature_name": "Грамм",
-              "defenition": "г|гр|грамм|g|gram",
+              "defenition": "г|гр|г[.]|грамм|g|gr|gram",
               "relative_weight": 1000000,
-              "prefix": "",
-              "postfix": "",
+              "prefix": "common",
+              "postfix": "[^\\\\/a-zа-я]",
               "max_count": 1,
               "search_mode": "behind",
               "use_it": true
@@ -98,8 +98,8 @@
               "feature_name": "Килограмм",
               "defenition": "кг|килограмм|kg|kilogram",
               "relative_weight": 1000000000,
-              "prefix": "",
-              "postfix": "",
+              "prefix": "common",
+              "postfix": "common",
               "max_count": 1,
               "search_mode": "behind",
               "use_it": true
@@ -121,17 +121,17 @@
           "priority": 10
         },
         "measure_data": {
-          "common_prefix": "",
-          "common_postfix": "",
+          "common_prefix": "[^0-9]",
+          "common_postfix": "[^а-я]",
           "common_max_count": 1,
           "special_value_search": "([2-9][,.]?\\d*|[1-9]\\d+[,.]?\\d*)",
           "features": [
             {
               "feature_name": "Штуки",
-              "defenition": "шт|уп|пач",
+              "defenition": "шт|уп|пач|штук|упак|упаковок|пачек",
               "relative_weight": 1,
-              "prefix": "",
-              "postfix": "",
+              "prefix": "common",
+              "postfix": "common",
               "max_count": 1,
               "search_mode": "behind",
               "use_it": true
@@ -141,9 +141,185 @@
               "defenition": "№|\\sn|\\s[xх]",
               "relative_weight": 1,
               "prefix": "",
-              "postfix": "",
+              "postfix": "[^0-9]",
               "max_count": 1,
               "search_mode": "front",
+              "use_it": true
+            }
+          ]
+        }
+      },
+      {
+        "measure_name": "Объем памяти",
+        "autosem": {
+          "merge_mode": "1",
+          "exclude_rx": false,
+          "use_it": true
+        },
+        "feature_validator": {
+          "use_it": true,
+          "validation_mode": "strict",
+          "not_found_mode": "strict",
+          "priority": 10
+        },
+        "measure_data": {
+          "common_prefix": "[^0-9]",
+          "common_postfix": "",
+          "common_max_count": 1,
+          "special_value_search": null,
+          "features": [
+            {
+              "feature_name": "Килобайт",
+              "defenition": "kb|kilobyte|килобайт|кб",
+              "relative_weight": 1,
+              "prefix": "common",
+              "postfix": "common",
+              "max_count": 1,
+              "search_mode": "behind",
+              "use_it": true
+            },
+            {
+              "feature_name": "Мегабайт",
+              "defenition": "mb|megabyte|мегабайт|мб",
+              "relative_weight": 1000,
+              "prefix": "common",
+              "postfix": "common",
+              "max_count": 1,
+              "search_mode": "behind",
+              "use_it": true
+            },
+            {
+              "feature_name": "Гигабайт",
+              "defenition": "gb|gigabyte|гигабайт|гб",
+              "relative_weight": 1000000,
+              "prefix": "common",
+              "postfix": "common",
+              "max_count": 1,
+              "search_mode": "behind",
+              "use_it": true
+            },
+            {
+              "feature_name": "Террабайт",
+              "defenition": "tb|terabyte|терабайт|тб",
+              "relative_weight": 1000000000,
+              "prefix": "common",
+              "postfix": "common",
+              "max_count": 1,
+              "search_mode": "behind",
+              "use_it": true
+            }
+          ]
+        }
+      },
+      {
+        "measure_name": "Концентрация на дозу",
+        "autosem": {
+          "merge_mode": "1",
+          "exclude_rx": false,
+          "use_it": true
+        },
+        "feature_validator": {
+          "use_it": true,
+          "validation_mode": "strict",
+          "not_found_mode": "strict",
+          "priority": 10
+        },
+        "measure_data": {
+          "common_prefix": "[^0-9]",
+          "common_postfix": "",
+          "common_max_count": 1,
+          "special_value_search": null,
+          "features": [
+            {
+              "feature_name": "Микрограмм на дозу",
+              "defenition": "мкг[\\\\\\/](?:доз|сут)",
+              "relative_weight": 1,
+              "prefix": "common",
+              "postfix": "common",
+              "max_count": 1,
+              "search_mode": "behind",
+              "use_it": true
+            },
+            {
+              "feature_name": "Миллиграмм на дозу",
+              "defenition": "мг[\\\\\\/](?:доз|сут)",
+              "relative_weight": 1000,
+              "prefix": "common",
+              "postfix": "common",
+              "max_count": 1,
+              "search_mode": "behind",
+              "use_it": true
+            },
+            {
+              "feature_name": "Грамм на дозу",
+              "defenition": "г[\\\\\\/](?:доз|сут)",
+              "relative_weight": 1000000,
+              "prefix": "common",
+              "postfix": "common",
+              "max_count": 1,
+              "search_mode": "behind",
+              "use_it": true
+            }
+          ]
+        }
+      },
+      {
+        "measure_name": "Длина",
+        "autosem": {
+          "merge_mode": "1",
+          "exclude_rx": false,
+          "use_it": true
+        },
+        "feature_validator": {
+          "use_it": true,
+          "validation_mode": "strict",
+          "not_found_mode": "strict",
+          "priority": 10
+        },
+        "measure_data": {
+          "common_prefix": "[^0-9]",
+          "common_postfix": "",
+          "common_max_count": 1,
+          "special_value_search": null,
+          "features": [
+            {
+              "feature_name": "Миллиметр",
+              "defenition": "мм|миллиметр|mm|millimeter",
+              "relative_weight": 1,
+              "prefix": "common",
+              "postfix": "common",
+              "max_count": 1,
+              "search_mode": "behind",
+              "use_it": true
+            },
+            {
+              "feature_name": "Сантиметр",
+              "defenition": "см|сантиметр|centimeter|cm",
+              "relative_weight": 10,
+              "prefix": "[^0-9.]",
+              "postfix": "common",
+              "max_count": 1,
+              "search_mode": "behind",
+              "use_it": true
+            },
+            {
+              "feature_name": "Метр",
+              "defenition": "м\\s|метр|m\\s|meter",
+              "relative_weight": 1000,
+              "prefix": "common",
+              "postfix": "common",
+              "max_count": 1,
+              "search_mode": "behind",
+              "use_it": true
+            },
+            {
+              "feature_name": "Километр",
+              "defenition": "км|километр|km|kilometer",
+              "relative_weight": 1000000,
+              "prefix": "common",
+              "postfix": "common",
+              "max_count": 1,
+              "search_mode": "behind",
               "use_it": true
             }
           ]

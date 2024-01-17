@@ -61,8 +61,17 @@ class FEATURE(object):
 
 
 class MEASURE_MAPPER(object):
+    # numeric
     weight = "Вес"
     volume = "Объем"
     quantity = "Количество"
+    memory_capacity = "Объем памяти"
+    concentration_per_dose = "Концентрация на дозу"
+    lenght = "Длина"
 
+    # string
     color = "Цвет"
+
+    # complex
+    complex_dimension = "Complex Dimension"
+    complex_concentration = "Complex Concentation"

@@ -231,6 +231,8 @@ class NumericFeature(MeasureFeature):
                 if "." in num:
                     num = re.sub("0+$", "", num)
                     num = re.sub("\.$", "", num)
+                if "." in num:
+                    num = re.sub("[.]", "[.,]", num)
         return num
 
     def _to_regex(self, numeric_values: list[str]) -> list[str]:
@@ -250,7 +252,6 @@ class NumericFeature(MeasureFeature):
                 if feature.search_mode == SearchMode.BEHIND:
                     rx_part = (
                         feature.prefix
-                        + "\D"
                         + num
                         + "\s*"
                         + "(?:"
@@ -267,7 +268,6 @@ class NumericFeature(MeasureFeature):
                         + ")"
                         + "\s*"
                         + num
-                        + "\D"
                         + feature.postfix
                     )
 
@@ -641,6 +641,8 @@ if __name__ == "__main__":
         "/home/mainus/Projects/ProductMatcher/config/measures_config/setups/main.json"
     )
 
-    measures = Measures(config)
-    data = measures.extract_all(data, "name")
-    data = measures.concat_regex(data, True)
+    print(config)
+
+    # measures = Measures(config)
+    # data = measures.extract_all(data, "name")
+    # data = measures.concat_regex(data, True)

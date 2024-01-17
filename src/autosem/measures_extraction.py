@@ -1,11 +1,13 @@
+import sys
 import math
 import pandas as pd
 import numpy as np
+import warnings
 import re
 import json
 from pathlib import Path
-import sys
 
+warnings.filterwarnings('ignore')
 
 PROJECT_DIR = Path(__file__).parent.parent.parent
 SRC_DIR = PROJECT_DIR / "src"
@@ -232,7 +234,7 @@ class SizeExtractor(Extractor):
 
 if __name__ == "__main__":
     data = pd.DataFrame()
-    data.at[0, "name"] = "Мандарин 10шт"
+    data.at[0, "name"] = "Мандарин 10мл"
     data.at[1, "name"] = "Мандарин 11шт"
     data.at[2, "name"] = "Мандарин 12шт"
     data.at[3, "name"] = "Мандарин 1шт"
@@ -248,4 +250,4 @@ if __name__ == "__main__":
     # print(series)
 
     data = mAllExtractor.extract(data, "name", True)
-    print(data)
+    print(data.at[0, "regex"])

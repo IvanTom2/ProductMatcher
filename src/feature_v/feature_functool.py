@@ -149,18 +149,3 @@ class FeatureList(object):
 
     def __repr__(self) -> str:
         return f"{self.feature_list}"
-
-    # def default_features(self) -> list[AbstractTextFeature]:
-    #     return [
-    #         Weight,
-    #         Volume,
-    #         MemoryCapacity,
-    #         ComplexDimension,
-    #         Size,
-    #         Length,
-    #         Quantity,
-    #         Color,
-    #         ComplexConcentration,
-    #         ConcentrationPerDose,
-    #         FarmaForm,
-    #     ]

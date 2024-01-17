@@ -2,6 +2,7 @@ import sys
 import pytest
 import itertools
 import json
+import random
 import pandas as pd
 from enum import Enum
 from decimal import Decimal
@@ -14,6 +15,8 @@ CLIENT_PRODUCT = "_client_product_test"
 SOURCE_RECORD = "_source_record_test"
 SOURCE_PRODUCT = "_source_product_test"
 
+DEBUG = "DEBUG"
+MEASURE_NAME = "_measure_name_test"
 IS_EQUAL = "_is_equal_test"
 REGEX = "_regex_test"
 EXTRACTED = "_extracted_test"
@@ -110,10 +113,13 @@ class NumericDataGenerator(object):
     ) -> list[NumericProductRecord]:
         def generate_value(str_num: str) -> str:
             value = ""
+            rsp = random.choice(range(0, 4))
+            spaces = "" if not rsp else " " * rsp
+
             if backward:
-                value = f"{str_num} {designation}"
+                value = f"{str_num}{spaces}{designation}"
             else:
-                value = f"{designation} {str_num}"
+                value = f"{designation}{spaces}{str_num}"
             return value
 
         records = []
@@ -159,14 +165,16 @@ class NumericDataGenerator(object):
         cls,
         records: list[NumericProductRecord],
     ) -> pd.DataFrame:
-        cartesian = list(itertools.product(records, records))
+        measure_name = records[0].type
 
+        cartesian = list(itertools.product(records, records))
         data = pd.DataFrame(data=cartesian, columns=[CLIENT_RECORD, SOURCE_RECORD])
 
         products = list(map(lambda x: (x[0].product, x[1].product), cartesian))
         data[[CLIENT_PRODUCT, SOURCE_PRODUCT]] = products
 
         data[IS_EQUAL] = data.apply(cls.determine_marks, axis=1)
+        data[MEASURE_NAME] = measure_name
 
         return data
 
@@ -234,6 +242,53 @@ class NumericDataSet(object):
 
             records.extend(backward)
             records.extend(forward)
+
+        data = cls.generator.distribute_records(records)
+        return data
+
+    @classmethod
+    def memory_capacity_data(cls) -> pd.DataFrame:
+        records = cls.generator.declare_records(
+            measures=[
+                NumericMeasure(1000000000, ["kb", "kilobyte", "килобайт", "кб"]),
+                NumericMeasure(1000000, ["mb", "megabyte", "мегабайт", "мб"]),
+                NumericMeasure(1000, ["gb", "gigabyte", "гигабайт", "гб"]),
+                NumericMeasure(1, ["tb", "terabyte", "терабайт", "тб"]),
+            ],
+            product_names=["Айфон", "Самсунг"],
+            data_type=DataTypes.memory_capacity,
+        )
+
+        data = cls.generator.distribute_records(records)
+        return data
+
+    @classmethod
+    def concentration_per_dose_data(cls) -> pd.DataFrame:
+        records = cls.generator.declare_records(
+            measures=[
+                NumericMeasure(1000000, ["мкг/доза", "мкг/сут", "мкг\доза", "мкг\сут"]),
+                NumericMeasure(1000, ["мг/доза", "мг/сут", "мг\доза", "мг\сут"]),
+                NumericMeasure(1, ["г/доза", "г/сут", "г\доза", "г\сут"]),
+            ],
+            product_names=["Аспирин", "Корвалол"],
+            data_type=DataTypes.concentration_per_dose,
+        )
+
+        data = cls.generator.distribute_records(records)
+        return data
+
+    @classmethod
+    def length_data(cls) -> pd.DataFrame:
+        records = cls.generator.declare_records(
+            measures=[
+                NumericMeasure(1000000, ["мм", "миллиметр", "mm", "millimeter"]),
+                NumericMeasure(100000, ["см", "сантиметр", "centimeter", "cm"]),
+                NumericMeasure(1000, ["м", "метр", "m", "meter"]),
+                NumericMeasure(1, ["км", "километр", "km", "kilometer"]),
+            ],
+            product_names=["Полотно", "Сукно"],
+            data_type=DataTypes.lenght,
+        )
 
         data = cls.generator.distribute_records(records)
         return data
@@ -340,14 +395,17 @@ class StringDataGenerator(object):
         cls,
         records: list[StringProductRecord],
     ) -> pd.DataFrame:
-        cartesian = list(itertools.product(records, records))
+        measure_name = records[0].type
 
+        cartesian = list(itertools.product(records, records))
         data = pd.DataFrame(data=cartesian, columns=[CLIENT_RECORD, SOURCE_RECORD])
 
         products = list(map(lambda x: (x[0].product, x[1].product), cartesian))
         data[[CLIENT_PRODUCT, SOURCE_PRODUCT]] = products
 
         data[IS_EQUAL] = data.apply(cls.determine_marks, axis=1)
+        data[MEASURE_NAME] = measure_name
+
         return data
 
 
@@ -386,10 +444,36 @@ class StringDataSet(object):
         return data
 
 
+class UncreationDataSet(object):
+    def __init__(self) -> None:
+        numeric = NumericDataSet.all()
+        string = StringDataSet.all()
+
+        all_data = pd.concat([numeric, string], ignore_index=True)
+        self.data = all_data.drop_duplicates(
+            subset=[
+                CLIENT_PRODUCT,
+                MEASURE_NAME,
+            ]
+        )[
+            [
+                CLIENT_PRODUCT,
+                MEASURE_NAME,
+            ]
+        ]
+        self.data.index = range(len(self.data))
+
+    def get_data(self, measure_name: DataTypes) -> pd.DataFrame:
+        return self.data[self.data[MEASURE_NAME] != measure_name]
+
+
 MEASURES_CONFIG = get_measures_config()
 FUZZY_CONFIG = get_fuzzy_config()
 
 
 if __name__ == "__main__":
-    data = NumericDataSet.all()
-    print(data)
+    dataset = UncreationDataSet()
+
+    print(dataset.get_data(DataTypes.color))
+
+    # data.to_excel("check.xlsx", index=False)
