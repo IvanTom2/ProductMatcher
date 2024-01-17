@@ -140,9 +140,9 @@ class MeasureFeature(AbstractMeasureFeature):
             vsrch = special_value_search
 
         if self.search_mode == SearchMode.BEHIND:
-            rx = rf"{vsrch}\s*(?:{self.defenition})"
+            rx = rf"{self.prefix}{vsrch}\s*(?:{self.defenition}){self.postfix}"
         else:
-            rx = rf"(?:{self.defenition})\s*{vsrch}"
+            rx = rf"{self.prefix}(?:{self.defenition})\s*{vsrch}{self.postfix}"
 
         return rx
 
@@ -641,8 +641,8 @@ if __name__ == "__main__":
         "/home/mainus/Projects/ProductMatcher/config/measures_config/setups/main.json"
     )
 
-    print(config)
+    measures = Measures(config)
+    data = measures.extract_all(data, "name")
+    data = measures.concat_regex(data, True)
 
-    # measures = Measures(config)
-    # data = measures.extract_all(data, "name")
-    # data = measures.concat_regex(data, True)
+    print(data)

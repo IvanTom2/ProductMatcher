@@ -7,7 +7,7 @@ import re
 import json
 from pathlib import Path
 
-warnings.filterwarnings('ignore')
+warnings.filterwarnings("ignore")
 
 PROJECT_DIR = Path(__file__).parent.parent.parent
 SRC_DIR = PROJECT_DIR / "src"
@@ -165,11 +165,11 @@ class SizeExtractor(Extractor):
 
         if isinstance(values, tuple):
             for kf_ind in range(len(kfs)):
-                _rx = "\D"
+                _rx = r"\D"
                 kf = kfs[kf_ind]
                 for val_ind in range(len(values)):
                     val = self._prep_value(values[val_ind], kf)
-                    val_end = "\D+" if val_ind < len(values) - 1 else "\D"
+                    val_end = r"\D+" if val_ind < len(values) - 1 else r"\D"
                     _rx += rf"{val}{val_end}"
 
                 _sep = "|" if kf_ind < len(kfs) - 1 else ""

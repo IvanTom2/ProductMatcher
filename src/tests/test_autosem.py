@@ -207,6 +207,49 @@ class TestAutosemUncreation(BaseTestAutosem):
             self.extractor(),
         )
 
+    def test_uncreation_volume(self, dataset: UncreationDataSet):
+        self.run_uncreation_test(
+            dataset.get_data(DataTypes.volume),
+            DataTypes.volume,
+            self.extractor(),
+        )
+
+    @pytest.mark.xfail
+    def test_uncreation_quantity(self, dataset: UncreationDataSet):
+        self.run_uncreation_test(
+            dataset.get_data(DataTypes.quantity),
+            DataTypes.quantity,
+            self.extractor(),
+        )
+
+    def test_uncreation_memory_capacity(self, dataset: UncreationDataSet):
+        self.run_uncreation_test(
+            dataset.get_data(DataTypes.memory_capacity),
+            DataTypes.memory_capacity,
+            self.extractor(),
+        )
+
+    def test_uncreation_concentration_per_dose(self, dataset: UncreationDataSet):
+        self.run_uncreation_test(
+            dataset.get_data(DataTypes.concentration_per_dose),
+            DataTypes.concentration_per_dose,
+            self.extractor(),
+        )
+
+    def test_uncreation_lenght(self, dataset: UncreationDataSet):
+        self.run_uncreation_test(
+            dataset.get_data(DataTypes.lenght),
+            DataTypes.lenght,
+            self.extractor(),
+        )
+
+    def test_uncreation_color(self, dataset: UncreationDataSet):
+        self.run_uncreation_test(
+            dataset.get_data(DataTypes.color),
+            DataTypes.color,
+            self.extractor(),
+        )
+
 
 class AutosemUncreationTestsDebug(TestAutosemUncreation):
     def __init__(self) -> None:
@@ -221,4 +264,4 @@ if __name__ == "__main__":
     dataset = UncreationDataSet()
     test_debug = AutosemUncreationTestsDebug()
 
-    test_debug.test_uncreation_weight(dataset)
+    test_debug.test_uncreation_quantity(dataset)
