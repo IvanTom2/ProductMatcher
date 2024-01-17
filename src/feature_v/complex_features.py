@@ -477,8 +477,8 @@ class ComplexDimension(AbstractTextFeature):
     _sgn = r"(?:см|cm|мм|mm|м|m)?"
 
     _weights = [
-        (0.001, "мм|mm"),
-        (0.01, "см|cm"),
+        (0.001, r"мм|mm"),
+        (0.01, r"см|cm"),
         (1, r"m([^m]|\b)|м([^м]|\b)"),
     ]
 
@@ -494,7 +494,7 @@ class ComplexDimension(AbstractTextFeature):
         measure: Measure,
     ) -> None:
         self.original_value = value
-        self.standard_weight = 1
+        self.standard_weight = self._weights[1][0]
 
         self.standard_value = self._standartization(value)
 
@@ -564,7 +564,7 @@ class ComplexConcentration(AbstractTextFeature):
     _bot = r"(?:мл|л)"
 
     _tops = [
-        (0.000001, r"мкг"),
+        (0.001, r"мкг"),
         (1, r"мг"),
         (1000, r"г"),
         (1000000, r"кг"),
@@ -599,6 +599,8 @@ class ComplexConcentration(AbstractTextFeature):
             self.standard_value = self._numerical_standartization(value)
         elif unit is self.Percent_Concentration:
             self.standard_value = self._percent_standartization(value)
+        else:
+            raise ValueError("Undetected unit type")
 
     def _num_standartization(self, value: str, weights: str) -> Decimal:
         num = re.search(self._num1, value)

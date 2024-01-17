@@ -4,3 +4,4 @@ Brandpol_Validator/*
 __pycache__
 */__pycache__/*
 *.xlsx
+.~lock.*

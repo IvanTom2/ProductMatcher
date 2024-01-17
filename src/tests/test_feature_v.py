@@ -49,7 +49,6 @@ class BaseTestFeatureV(object):
         data: pd.DataFrame,
         validator: TextFeatureValidator,
     ):
-        print(self.debug)
         data = validator.validate(data)
         assert self.checkout(data)
 

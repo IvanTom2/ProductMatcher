@@ -93,6 +93,17 @@ class TextFeatureValidator(AbstractTextFeatureValidator):
         series = series.apply(self._preproccess, args=(feature, unit))
         return series
 
+    def _del_pattern(self, cell: str, unit: TextFeatureUnit) -> str:
+        return re.sub(unit.regex, "  ", cell)
+
+    def _del_unit(
+        self,
+        series: pd.Series,
+        unit: TextFeatureUnit,
+    ) -> pd.Series:
+        series = series.apply(self._del_pattern, args=(unit,))
+        return series
+
     def _determine_based_intersection(
         self,
         cif: set,
@@ -174,6 +185,13 @@ class TextFeatureValidator(AbstractTextFeatureValidator):
                     unit,
                 )
 
+                data[FEATURES.SOURCE_NAME] = self._del_unit(
+                    data[FEATURES.SOURCE_NAME], unit
+                )
+                data[FEATURES.CLIENT_NAME] = self._del_unit(
+                    data[FEATURES.CLIENT_NAME], unit
+                )
+
                 data[FEATURES.CI] += cif
                 data[FEATURES.SI] += sif
 
@@ -209,28 +227,36 @@ if __name__ == "__main__":
     df = pd.DataFrame()
 
     df["Название клиент"] = [
-        "Сок 1л",
-        "Томаты 1кг",
-        "Консервы 10шт",
-        "Сок 1л",
-        "Томаты 1кг",
-        "Консервы 10шт",
-        "Пальто синее",
-        "Пальто зеленое",
-        "Таблетка 10мг/мл",
-        "Таблетка 10мг/мл",
+        # "Сок 1л",
+        # "Томаты 1кг",
+        # "Консервы 10шт",
+        # "Сок 1л",
+        # "Томаты 1кг",
+        # "Консервы 10шт",
+        # "Пальто синее",
+        # "Пальто зеленое",
+        "Таблетка 1мг/мл",
+        "Таблетка 1мг/мл",
+        "Таблетка 1г/мл",
+        "Таблетка 1%",
+        "Таблетка 1%",
+        "Таблетка 100мг/5мл",
     ]
     df["Название сайт"] = [
-        "Сок 1000мл",
-        "Томаты 1000г",
-        "Консервы №10",
-        "Сок 990мл",
-        "Томаты 0.9кг",
-        "Консервы 9шт",
-        "Пальто синее",
-        "Пальто красное",
+        # "Сок 1000мл",
+        # "Томаты 1000г",
+        # "Консервы №10",
+        # "Сок 990мл",
+        # "Томаты 0.9кг",
+        # "Консервы 9шт",
+        # "Пальто синее",
+        # "Пальто красное",
+        "Таблетка 0.001г/мл",
+        "Таблетка 1000мкг/мл",
+        "Таблетка 1000мг/мл",
         "Таблетка 10мг/мл",
-        "Таблетка 10г/мл",
+        "Таблетка 0.01г/мл",
+        "Таблетка 200мг/10мл",
     ]
 
     config = read_config(
