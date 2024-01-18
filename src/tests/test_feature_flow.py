@@ -17,7 +17,7 @@ from common_test import (
     MEASURES_CONFIG,
     DEBUG,
 )
-from custom_data import CustomFeatureValidationData
+from custom_data import CustomFeatureFlowData
 from src.feature_flow.main import (
     FeatureFlow,
     FeatureGenerator,
@@ -25,7 +25,7 @@ from src.feature_flow.main import (
 )
 
 
-class BaseTestFeatureV(object):
+class BaseTestFeatureFlow(object):
     debug = False
 
     def validator(self):
@@ -54,7 +54,7 @@ class BaseTestFeatureV(object):
         assert self.checkout(data)
 
 
-class TestFeatureVGenerics(BaseTestFeatureV):
+class TestFeatureFlowGenerics(BaseTestFeatureFlow):
     def test_generics_feature_validation(self):
         data = pd.concat(
             [
@@ -69,24 +69,24 @@ class TestFeatureVGenerics(BaseTestFeatureV):
         )
 
 
-class TestFeatureVCustom(BaseTestFeatureV):
+class TestFeatureFlowCustom(BaseTestFeatureFlow):
     def test_custom_feature_validation(self):
-        data = CustomFeatureValidationData.get_data()
+        data = CustomFeatureFlowData.get_data()
         self.run_validation_test(data, self.validator())
 
 
-class FeatureVGenericsTestsDebug(TestFeatureVGenerics):
+class FeatureFlowGenericsTestsDebug(TestFeatureFlowGenerics):
     def __init__(self) -> None:
         super().__init__()
         self.debug = True
 
 
-class FeatureVCustomTestsDebug(TestFeatureVCustom):
+class FeatureVCustomTestsDebug(TestFeatureFlowCustom):
     def __init__(self) -> None:
         super().__init__()
         self.debug = True
 
 
 if __name__ == "__main__":
-    test = FeatureVGenericsTestsDebug()
+    test = FeatureFlowGenericsTestsDebug()
     test.test_generics_feature_validation()

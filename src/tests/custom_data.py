@@ -108,7 +108,7 @@ class CustomData(object):
         return data
 
 
-class CustomFeatureValidationData(object):
+class CustomFeatureFlowData(object):
     @classmethod
     def get_data(cls) -> pd.DataFrame:
         data = pd.DataFrame(

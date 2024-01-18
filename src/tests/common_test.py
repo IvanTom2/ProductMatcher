@@ -25,9 +25,9 @@ CHECKOUT = "_checkout_test"
 
 PROJECT_DIR = Path(__file__).parent.parent.parent
 CONFIG_DIR = PROJECT_DIR / "config"
-
-
 sys.path.append(str(PROJECT_DIR))
+
+
 from config.measures_config.config_parser import (
     MEASURE_MAPPER,
     CONFIG,

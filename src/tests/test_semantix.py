@@ -59,8 +59,6 @@ class BaseTestSemantix(object):
         data[REGEX] = extractor.extract(data, CLIENT_PRODUCT, measure_name)
         assert self.rx_matching_checkout(data)
 
-        # data.to_excel("debug.xlsx", index=False)
-
     def uncreation_checkout(self, data: pd.DataFrame) -> bool:
         check = data[EMPTY].sum() == 0
         if self.debug and not check:
@@ -85,10 +83,8 @@ class BaseTestSemantix(object):
         data.loc[:, EMPTY] = data[REGEX].apply(not_empty)
         assert self.uncreation_checkout(data)
 
-        # data.to_excel("debug.xlsx", index=False)
 
-
-class TestAutosemGenericsRxMatching(BaseTestSemantix):
+class TestSemantixGenericsRxMatching(BaseTestSemantix):
     def test_rx_matching_weight(self):
         self.run_rx_matching_test(
             NumericDataSet.weight_data(),
@@ -139,7 +135,7 @@ class TestAutosemGenericsRxMatching(BaseTestSemantix):
         )
 
 
-class TestAutosemCustomRxMatching(BaseTestSemantix):
+class TestSemantixCustomRxMatching(BaseTestSemantix):
     def test_rx_matching_weight_custom(self):
         self.run_rx_matching_test(
             CustomData.custom_weight_data(),
@@ -183,19 +179,19 @@ class TestAutosemCustomRxMatching(BaseTestSemantix):
         )
 
 
-class AutosemGenericsRxMatchingTestsDebug(TestAutosemGenericsRxMatching):
+class SemantixGenericsRxMatchingTestsDebug(TestSemantixGenericsRxMatching):
     def __init__(self) -> None:
         super().__init__()
         self.debug = True
 
 
-class AutosemCustomRxMatchingTestsDebug(TestAutosemCustomRxMatching):
+class SemantixCustomRxMatchingTestsDebug(TestSemantixCustomRxMatching):
     def __init__(self) -> None:
         super().__init__()
         self.debug = True
 
 
-class TestAutosemUncreation(BaseTestSemantix):
+class TestSemantixUncreation(BaseTestSemantix):
     @pytest.fixture
     def dataset(self) -> UncreationDataSet:
         return UncreationDataSet()
@@ -251,14 +247,16 @@ class TestAutosemUncreation(BaseTestSemantix):
         )
 
 
-class AutosemUncreationTestsDebug(TestAutosemUncreation):
+class TestSemantixUncreationCustom(BaseTestSemantix):
+    def test_uncreation_weight(self, dataset: UncreationDataSet):
+        self.run_uncreation_test(
+            CustomUncreationData.uncreation_weight_data(),
+            DataTypes.weight,
+            self.extractor(),
+        )
+
+
+class AutosemUncreationTestsDebug(TestSemantixUncreation):
     def __init__(self) -> None:
         super().__init__()
         self.debug = True
-
-
-if __name__ == "__main__":
-    test_debug = AutosemGenericsRxMatchingTestsDebug()
-    # test_debug = AutosemCustomRxMatchingTestsDebug()
-
-    test_debug.test_rx_matching_quantity()
