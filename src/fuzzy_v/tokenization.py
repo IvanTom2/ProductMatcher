@@ -3,9 +3,14 @@ import pandas as pd
 from nltk.tokenize import word_tokenize
 from collections import namedtuple
 from typing import Union
+import sys
+from pathlib import Path
 
-from strmod.word_extraction import WordsExtractor, LanguageRules
-from strmod.word_extraction_funcs import LanguageType
+PROJECT_DIR = Path(__file__).parent.parent.parent
+sys.path.append(str(PROJECT_DIR))
+
+from src.fuzzy_v.strmod.word_extraction import WordsExtractor, LanguageRules
+from src.fuzzy_v.strmod.word_extraction_funcs import LanguageType
 
 WeightsRules = namedtuple("WeightRule", ["rules", "weight"])
 

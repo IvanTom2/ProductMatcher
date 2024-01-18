@@ -145,7 +145,3 @@ class CustomUncreationData(object):
             columns=[CLIENT_PRODUCT],
         )
         return data
-
-
-if __name__ == "__main__":
-    print(CustomData.custom_weight_data())

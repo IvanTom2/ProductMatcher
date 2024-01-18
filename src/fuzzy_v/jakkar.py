@@ -12,10 +12,10 @@ PROJECT_DIR = SRC_DIR.parent
 sys.path.append(str(PROJECT_DIR))
 
 from src.notation import JAKKAR, DATA
-from preprocessing import Preprocessor
-from fuzzy_search import FuzzySearch
-from ratio import RateCounter, MarksCounter, MarksMode, RateFunction
-from tokenization import (
+from src.fuzzy_v.preprocessing import Preprocessor
+from src.fuzzy_v.fuzzy_search import FuzzySearch
+from src.fuzzy_v.ratio import RateCounter, MarksCounter, MarksMode, RateFunction
+from src.fuzzy_v.tokenization import (
     BasicTokenizer,
     TokenTransformer,
     RegexTokenizer,
@@ -217,8 +217,8 @@ class FuzzyJakkarValidator(object):
 
 def setup_jakkar_validator(
     config: dict,
-    fuzzy_threshold: int,
-    validation_threshold: int,
+    fuzzy_threshold: float,
+    validation_threshold: float,
 ) -> FuzzyJakkarValidator:
     regex_weights = RegexCustomWeights(
         config[CONFIG.REGEX_WEIGHTS][REGEX_WEIGHTS.CAPS],

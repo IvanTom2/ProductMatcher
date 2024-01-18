@@ -7,6 +7,7 @@ import pandas as pd
 from enum import Enum
 from decimal import Decimal
 from pathlib import Path
+from typing import List, Tuple, Dict
 
 
 CLIENT_RECORD = "_client_record_test"
@@ -467,13 +468,186 @@ class UncreationDataSet(object):
         return self.data[self.data[MEASURE_NAME] != measure_name]
 
 
+class FuzzyDataAttribute(object):
+    def __init__(self, value: str, id: int) -> None:
+        self.value = value
+        self.id = id
+
+    def __repr__(self) -> str:
+        return f"value: {self.value}, id: {self.id}"
+
+
+class FuzzyDataRecord(object):
+    def __init__(
+        self,
+        entity: str,
+        attrs: Tuple[FuzzyDataAttribute],
+        extras: Tuple[str],
+    ) -> None:
+        self.value = self.gen_value(entity, attrs, extras)
+        self.id = self.gen_id(entity, attrs)
+
+    def gen_value(
+        self,
+        entity: str,
+        attrs: List[FuzzyDataAttribute],
+        extras: Tuple[str],
+    ) -> str:
+        value = entity
+        value += " " + " ".join(map(lambda x: x.value, attrs))
+        value += " " + " ".join(extras)
+        return value
+
+    def gen_id(
+        self,
+        entity: str,
+        attrs: List[FuzzyDataAttribute],
+    ) -> int:
+        id = entity
+        id += "+".join(map(lambda x: str(x.id), attrs))
+        return hash(id)
+
+
+class FuzzyDataGenerator(object):
+    def _extract_kwargs(
+        self,
+        kwargs: dict,
+    ) -> Tuple[List, List]:
+        attributes: List[List[FuzzyDataAttribute]] = []
+        extras: List[List[str]] = []
+
+        attribute_id = 0
+        for key in kwargs:
+            if "attrs" in key:
+                local_attributes = kwargs[key]
+                list_attributes = []
+                for index in range(len(local_attributes)):
+                    values = local_attributes[index]
+
+                    for value in values:
+                        attribute = FuzzyDataAttribute(value, attribute_id)
+                        list_attributes.append(attribute)
+                    attribute_id += 1
+
+                attributes.append(list_attributes)
+
+            elif "extras" in key:
+                extras.append(kwargs[key])
+
+        return attributes, extras
+
+    def _generate_records(
+        self,
+        entities: List[str],
+        attributes: List[List[str]],
+        extras: List[List[str]],
+    ) -> List[FuzzyDataRecord]:
+        records: List[FuzzyDataRecord] = []
+
+        attrs_prod = list(itertools.product(*attributes))
+        extras_prod = list(itertools.product(*extras))
+        others = list(itertools.product(attrs_prod, extras_prod))
+
+        for entity in entities:
+            for attrs, extras in others:
+                record = FuzzyDataRecord(entity, attrs, extras)
+                records.append(record)
+
+        return records
+
+    def generate(
+        self,
+        entities: list[str],
+        k: int,
+        **kwargs,
+    ) -> pd.DataFrame:
+        """
+        Attributes: list[list[str]] = attrs{int} - affects marks
+        Extras: list[str] = extras{int} - doesn't affect marks
+        """
+        data = pd.DataFrame()
+
+        attributes, extras = self._extract_kwargs(kwargs)
+        records = self._generate_records(entities, attributes, extras)
+        records_product = list(itertools.product(records, records))
+        records_product = list(
+            map(
+                lambda x: (
+                    x[0].value,
+                    x[1].value,
+                    x[0].id == x[1].id,
+                ),
+                records_product,
+            )
+        )
+
+        equal_records = list(filter(lambda x: x[2] == True, records_product))
+        unequal_records = list(filter(lambda x: x[2] == False, records_product))
+
+        equal_records = random.sample(equal_records, k=min(k / 2, len(equal_records)))
+        k_residue = len(equal_records)
+        unequal_records = random.sample(unequal_records, k=k_residue)
+
+        records = equal_records + unequal_records
+        data[CLIENT_PRODUCT] = list(map(lambda x: x[0], records))
+        data[SOURCE_PRODUCT] = list(map(lambda x: x[1], records))
+        data[IS_EQUAL] = list(map(lambda x: x[2], records))
+
+        return data
+
+
+class FuzzyDataSet(object):
+    generator: FuzzyDataGenerator = FuzzyDataGenerator()
+
+    @classmethod
+    def small(self):
+        entities = [
+            "Яблоко",
+            "Апельсин",
+            "Груша",
+            "Грейпфрут",
+            "Виноград",
+            "Помидор",
+            "Огурец",
+        ]
+        attrs1 = [
+            ["красный"],
+            ["зеленый"],
+            ["коричневый"],
+            ["черный"],
+            ["оранжевый"],
+            ["фиолетовый"],
+            ["розовый"],
+        ]
+        attrs2 = [
+            ["египетский"],
+            ["российский"],
+            ["французский"],
+            ["израильский"],
+            ["китайский"],
+            ["абхазский"],
+            ["укранский"],
+            ["японский"],
+        ]
+        extras1 = ["спелые", "свежие", "вкусные"]
+
+        data = self.generator.generate(
+            entities,
+            k=10000,
+            attrs1=attrs1,
+            attrs2=attrs2,
+            extras1=extras1,
+        )
+
+        return data
+
+
 MEASURES_CONFIG = get_measures_config()
 FUZZY_CONFIG = get_fuzzy_config()
 
 
 if __name__ == "__main__":
-    dataset = UncreationDataSet()
+    ds = FuzzyDataSet()
 
-    print(dataset.get_data(DataTypes.color))
-
-    # data.to_excel("check.xlsx", index=False)
+    data = ds.small()
+    print(data)

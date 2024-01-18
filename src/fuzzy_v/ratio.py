@@ -4,8 +4,13 @@ from typing import Callable
 from collections import Counter
 from itertools import chain
 from math import sqrt, log10
+import sys
+from pathlib import Path
 
-from tokenization import Token
+PROJECT_DIR = Path(__file__).parent.parent.parent
+sys.path.append(str(PROJECT_DIR))
+
+from src.fuzzy_v.tokenization import Token
 
 
 class AbstactRateCounter(ABC):

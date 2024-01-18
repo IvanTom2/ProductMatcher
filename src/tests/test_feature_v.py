@@ -15,6 +15,7 @@ from common_test import (
     SOURCE_PRODUCT,
     IS_EQUAL,
     MEASURES_CONFIG,
+    DEBUG,
 )
 from custom_data import CustomFeatureValidationData
 from src.feature_v.feature_validator import (
@@ -38,8 +39,8 @@ class BaseTestFeatureV(object):
     def checkout(self, data: pd.DataFrame) -> bool:
         check = (data[IS_EQUAL] != data[FEATURES.VALIDATED]).sum() == 0
         if self.debug:
-            data["DEBUG"] = data[IS_EQUAL] - data[FEATURES.VALIDATED]
-            data = data[data["DEBUG"] != 0]
+            data[DEBUG] = data[IS_EQUAL] - data[FEATURES.VALIDATED]
+            data = data[data[DEBUG] != 0]
             data.to_excel("debug.xlsx", index=False)
 
         return check

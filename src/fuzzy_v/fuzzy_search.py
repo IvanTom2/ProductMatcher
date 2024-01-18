@@ -1,17 +1,15 @@
+import sys
+from pathlib import Path
 import pandas as pd
 from fuzzywuzzy import process as fuzz_process
 from tqdm import tqdm
-import warnings
-import multiprocessing
-import numpy as np
-import gc
 
-
-warnings.filterwarnings("ignore")
 tqdm.pandas()
 
+PROJECT_DIR = Path(__file__).parent.parent.parent
+sys.path.append(str(PROJECT_DIR))
 
-from tokenization import Token, TokenTransformer
+from src.fuzzy_v.tokenization import Token, TokenTransformer
 
 
 def setup_tasks(
