@@ -1,19 +1,17 @@
 import sys
 import math
+import json
+import regex as re
 import pandas as pd
 import numpy as np
-import warnings
-import re
-import json
+
 from pathlib import Path
 
-PROJECT_DIR = Path(__file__).parent.parent.parent
-SRC_DIR = PROJECT_DIR / "src"
+SRC_DIR = Path(__file__).parent.parent
+PROJECT_DIR = SRC_DIR.parent
+sys.path.append(str(PROJECT_DIR))
 
-sys.path.append(str(Path(__file__).parent))
-
-
-from common import Extractor, Measures, read_config
+from src.semantix.common import Extractor, Measures, read_config
 
 
 class MeasureExtractor(Extractor):
@@ -248,4 +246,5 @@ if __name__ == "__main__":
     # print(series)
 
     data = mAllExtractor.extract(data, "name", True)
-    print(data.at[0, "regex"])
+    print(data.at[3, "Regex"])
+    print(data)

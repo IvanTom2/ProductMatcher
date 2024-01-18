@@ -1,7 +1,16 @@
 import nltk
+import sys
 import pandas as pd
 
-from common import LanguageRules, Extractor, WordsFuncTool
+from pathlib import Path
+
+SRC_DIR = Path(__file__).parent.parent
+PROJECT_DIR = SRC_DIR.parent
+sys.path.append(str(PROJECT_DIR))
+
+
+from src.functool.words_functool import LanguageRules, WordsFuncTool
+from src.functool.interfaces import Extractor
 
 
 def words_join(words: pd.Series, joiner="|") -> pd.Series:
@@ -46,7 +55,7 @@ class WordsExtractor(Extractor):
         rules: LanguageRules,
         expand_spaces: bool = False,
         del_founded: bool = False,
-    ):
+    ) -> None:
         self.rules = rules
         self.expand_spaces = expand_spaces
         self.del_founded = del_founded
@@ -114,7 +123,7 @@ class StraightWordExtractor(Extractor):
         main_rule: int = 0,
         expand_spaces: bool = False,
         del_founded: bool = False,
-    ):
+    ) -> None:
         if straight and not isinstance(rules, list):
             rules = [rules]
 
@@ -151,7 +160,7 @@ class StraightWordExtractor(Extractor):
             )
         return words
 
-    def _straight(self, data: pd.DataFrame, newcol: str):
+    def _straight(self, data: pd.DataFrame, newcol: str) -> pd.DataFrame:
         words = self.tool.extractWordsWithMultipleLangsLetters(
             data["_rows"],
             self.rules,

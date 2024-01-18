@@ -8,7 +8,7 @@ from pathlib import Path
 PROJECT_DIR = Path(__file__).parent.parent.parent
 sys.path.append(str(PROJECT_DIR))
 
-from src.fuzzy_v.jakkar import setup_jakkar_validator, FuzzyJakkarValidator
+from src.simfyzer.main import setup_SymFyzer, SimFyzer
 from src.notation import JAKKAR
 from src.tests.common_test import (
     FUZZY_CONFIG,
@@ -30,8 +30,8 @@ class BaseTestFuzzyV(object):
         config: dict = FUZZY_CONFIG,
         fuzzy_threshold: float = 0.75,
         validation_threshold: float = 0.5,
-    ) -> FuzzyJakkarValidator:
-        validator = setup_jakkar_validator(
+    ) -> SimFyzer:
+        validator = setup_SymFyzer(
             config=config,
             fuzzy_threshold=fuzzy_threshold,
             validation_threshold=validation_threshold,
@@ -53,7 +53,7 @@ class BaseTestFuzzyV(object):
     def run_validation_test(
         self,
         data: pd.DataFrame,
-        validator: FuzzyJakkarValidator,
+        validator: SimFyzer,
     ):
         data = validator.validate(data, CLIENT_PRODUCT, SOURCE_PRODUCT)
         assert self.checkout(data)

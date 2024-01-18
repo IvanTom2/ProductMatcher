@@ -32,7 +32,7 @@ class FeatureNotFoundMode(object):
         return mode
 
 
-class TextFeatureUnit(object):
+class FeatureUnit(object):
     def __init__(
         self,
         name: str,
@@ -47,24 +47,24 @@ class TextFeatureUnit(object):
         return f"{self.name} with weight {self.weight}"
 
 
-class AbstractTextFeature(ABC):
+class AbstractFeature(ABC):
     NAME = ""
     VALIDATION_MODE: FeatureValidationMode
     NOT_FOUND_MODE: FeatureNotFoundMode
     PRIORITY: int
-    UNITS: list[TextFeatureUnit] = []
+    UNITS: list[FeatureUnit] = []
 
     @abstractmethod
     def __init__(
         self,
         value: str,
-        unit: TextFeatureUnit,
+        unit: FeatureUnit,
     ) -> None:
         pass
 
     @classmethod
     @property
-    def units(self) -> list[TextFeatureUnit]:
+    def units(self) -> list[FeatureUnit]:
         return self.UNITS
 
 
@@ -123,13 +123,13 @@ class NotFoundStatus(object):
 class FeatureList(object):
     def __init__(
         self,
-        feature_list: list[AbstractTextFeature] = [],
+        feature_list: list[AbstractFeature] = [],
     ) -> None:
         self.feature_list = self.sort_futures(feature_list)
 
     def sort_futures(
-        self, feature_list: list[AbstractTextFeature]
-    ) -> list[AbstractTextFeature]:
+        self, feature_list: list[AbstractFeature]
+    ) -> list[AbstractFeature]:
         features = [(feature, feature.PRIORITY) for feature in feature_list]
         features = sorted(features, key=lambda feature: feature[1])
         features = list(map(lambda feature: feature[0], features))

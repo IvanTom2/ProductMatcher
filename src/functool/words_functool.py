@@ -1,6 +1,13 @@
 import re
 import pandas as pd
 
+from typing import Tuple
+
+
+class LanguageType(object):
+    RUS = "russian"
+    ENG = "english"
+
 
 class Language(object):
     """
@@ -14,7 +21,7 @@ class Language(object):
     def __init__(self, language: str) -> None:
         self.language = language
 
-    def _get_letters(self):
+    def _get_letters(self) -> str:
         if self.language == "english":
             letters = self.eng
         elif self.language == "russian":
@@ -23,11 +30,11 @@ class Language(object):
             raise ValueError("You should add this language to base")
         return letters
 
-    def get_letters(self):
+    def get_letters(self) -> str:
         letters = self._get_letters()
         return letters
 
-    def get_letters_and_symbols(self, symbols: str = "") -> tuple[str]:
+    def get_letters_and_symbols(self, symbols: str = "") -> Tuple[str]:
         letters = self.get_letters()
 
         up = letters.upper() + symbols
@@ -35,7 +42,7 @@ class Language(object):
         both = letters.upper() + letters.lower() + symbols
         return up, low, both
 
-    def get_letters_and_numbers(self) -> tuple[str]:
+    def get_letters_and_numbers(self) -> Tuple[str]:
         numbers = "0-9"
         letters = self.get_letters()
 
@@ -44,7 +51,7 @@ class Language(object):
         both = letters.upper() + letters.lower() + numbers
         return up, low, both
 
-    def get_letters_numbers_and_symbols(self, symbols: str = "") -> tuple[str]:
+    def get_letters_numbers_and_symbols(self, symbols: str = "") -> Tuple[str]:
         numbers = "0-9"
         letters = self.get_letters()
 
@@ -58,18 +65,18 @@ class Languages(Language):
     def __init__(self, languages: list[str]) -> None:
         self.languages = languages
 
-    def _get_letters(self, language):
+    def _get_letters(self, language) -> str:
         if language == "english":
             letters = self.eng
         elif language == "russian":
             letters = self.ru
         return letters
 
-    def get_letters(self):
+    def get_letters(self) -> str:
         letters = "".join([self._get_letters(lang) for lang in self.languages])
         return letters
 
-    def get_letters_and_symbols(self, symbols: str = "") -> tuple[str]:
+    def get_letters_and_symbols(self, symbols: str = "") -> Tuple[str]:
         letters = self.get_letters()
 
         up = letters.upper() + symbols
@@ -82,20 +89,20 @@ class LanguageRules(object):
     """
     Parameters
     ----------
-    language : extracting language
-    rule_name : name of rule (will be used as returning column name)
-    startUpper : word should start with capital letter
-    onlyUpper : word should contains only capital letters
-    check_letters : check if word contains letters (wouldn't extract only numbers)
-    symbols : extra symbols which the word can contains
-    word_boundary : boundary of the word \\b (left and right)
-    custom_boundary : custom boundary of the word (left and right)
-    with_numbers : allow extract word which contains numbers
-    min_lenght : min lenght of the word (included)
-    max_words : max count of extracted words (included)
-    stemming : apply stemming to extracted words
-    join_words : apply words joining
-    joiner : symbol for words joining
+        language : extracting language
+        rule_name : name of rule (will be used as returning column name)
+        startUpper : word should start with capital letter
+        onlyUpper : word should contains only capital letters
+        check_letters : check if word contains letters (wouldn't extract only numbers)
+        symbols : extra symbols which the word can contains
+        word_boundary : boundary of the word \\b (left and right)
+        custom_boundary : custom boundary of the word (left and right)
+        with_numbers : allow extract word which contains numbers
+        min_lenght : min lenght of the word (included)
+        max_words : max count of extracted words (included)
+        stemming : apply stemming to extracted words
+        join_words : apply words joining
+        joiner : symbol for words joining
     """
 
     def __init__(

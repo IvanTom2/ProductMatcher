@@ -21,13 +21,13 @@ from common_test import (
     MEASURES_CONFIG,
     DataTypes,
 )
-from src.autosem.measures_extraction import MeasureExtractor, MeasuresExtractor
+from src.semantix.measures_extraction import MeasureExtractor, MeasuresExtractor
 from custom_data import CustomData, CustomUncreationData
 
 EMPTY = "_test_empty"
 
 
-class BaseTestAutosem(object):
+class BaseTestSemantix(object):
     debug = False
 
     def extractor(self):
@@ -88,7 +88,7 @@ class BaseTestAutosem(object):
         # data.to_excel("debug.xlsx", index=False)
 
 
-class TestAutosemGenericsRxMatching(BaseTestAutosem):
+class TestAutosemGenericsRxMatching(BaseTestSemantix):
     def test_rx_matching_weight(self):
         self.run_rx_matching_test(
             NumericDataSet.weight_data(),
@@ -139,7 +139,7 @@ class TestAutosemGenericsRxMatching(BaseTestAutosem):
         )
 
 
-class TestAutosemCustomRxMatching(BaseTestAutosem):
+class TestAutosemCustomRxMatching(BaseTestSemantix):
     def test_rx_matching_weight_custom(self):
         self.run_rx_matching_test(
             CustomData.custom_weight_data(),
@@ -195,7 +195,7 @@ class AutosemCustomRxMatchingTestsDebug(TestAutosemCustomRxMatching):
         self.debug = True
 
 
-class TestAutosemUncreation(BaseTestAutosem):
+class TestAutosemUncreation(BaseTestSemantix):
     @pytest.fixture
     def dataset(self) -> UncreationDataSet:
         return UncreationDataSet()
@@ -258,10 +258,7 @@ class AutosemUncreationTestsDebug(TestAutosemUncreation):
 
 
 if __name__ == "__main__":
-    # test_debug = AutosemGenericsRxMatchingTestsDebug()
+    test_debug = AutosemGenericsRxMatchingTestsDebug()
     # test_debug = AutosemCustomRxMatchingTestsDebug()
 
-    dataset = UncreationDataSet()
-    test_debug = AutosemUncreationTestsDebug()
-
-    test_debug.test_uncreation_quantity(dataset)
+    test_debug.test_rx_matching_quantity()

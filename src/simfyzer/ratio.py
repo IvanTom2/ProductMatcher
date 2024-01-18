@@ -10,7 +10,7 @@ from pathlib import Path
 PROJECT_DIR = Path(__file__).parent.parent.parent
 sys.path.append(str(PROJECT_DIR))
 
-from src.fuzzy_v.tokenization import Token
+from src.simfyzer.tokenization import Token
 
 
 class AbstactRateCounter(ABC):

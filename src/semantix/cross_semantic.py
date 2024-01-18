@@ -9,7 +9,7 @@ PROJECT_DIR = SRC_DIR.parent
 
 from common import del_rx, LanguageRules
 from common import BasicCrosser
-from word_extraction import (
+from functool.word_extraction import (
     words_cleaner,
     words_filter,
     words_join,

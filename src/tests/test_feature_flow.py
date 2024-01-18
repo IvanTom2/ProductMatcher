@@ -18,8 +18,8 @@ from common_test import (
     DEBUG,
 )
 from custom_data import CustomFeatureValidationData
-from src.feature_v.feature_validator import (
-    TextFeatureValidator,
+from src.feature_flow.main import (
+    FeatureFlow,
     FeatureGenerator,
     FEATURES,
 )
@@ -30,7 +30,7 @@ class BaseTestFeatureV(object):
 
     def validator(self):
         features = FeatureGenerator().generate(MEASURES_CONFIG)
-        return TextFeatureValidator(
+        return FeatureFlow(
             CLIENT_PRODUCT,
             SOURCE_PRODUCT,
             features,
@@ -48,7 +48,7 @@ class BaseTestFeatureV(object):
     def run_validation_test(
         self,
         data: pd.DataFrame,
-        validator: TextFeatureValidator,
+        validator: FeatureFlow,
     ):
         data = validator.validate(data)
         assert self.checkout(data)
@@ -88,5 +88,5 @@ class FeatureVCustomTestsDebug(TestFeatureVCustom):
 
 
 if __name__ == "__main__":
-    test = FeatureVCustomTestsDebug()
-    test.test_custom_feature_validation()
+    test = FeatureVGenericsTestsDebug()
+    test.test_generics_feature_validation()

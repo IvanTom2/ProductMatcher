@@ -9,7 +9,7 @@ SRC_DIR = Path(__file__).parent.parent
 PROJECT_DIR = SRC_DIR.parent
 
 sys.path.append(str(PROJECT_DIR))
-from src.feature_v.feature_functool import AbstractTextFeature, TextFeatureUnit
+from src.feature_flow.feature_functool import AbstractFeature, FeatureUnit
 
 
 class FeatureValidationMode(object):
@@ -468,7 +468,7 @@ class Designation(object):
         return rf"{self.original_value}; {self.weight}; {self.standard_value}"
 
 
-class ComplexDimension(AbstractTextFeature):
+class ComplexDimension(AbstractFeature):
     NAME: str = "Complex Dimension"
 
     _num = r"\d*[.,]?\d+"
@@ -482,7 +482,7 @@ class ComplexDimension(AbstractTextFeature):
         (1, r"m([^m]|\b)|м([^м]|\b)"),
     ]
 
-    NDIM = TextFeatureUnit(
+    NDIM = FeatureUnit(
         "n-размерность",
         regex=rf"{_num}\s*{_sgn}\s*{_sep}\s*{_num}\s*{_sgn}(?:\s*{_sgn}\s*{_sep}\s*{_num}\s*{_sgn})*(?:\b|$)",
         weight=1,
@@ -554,7 +554,7 @@ class ComplexDimension(AbstractTextFeature):
         return [self.NDIM]
 
 
-class ComplexConcentration(AbstractTextFeature):
+class ComplexConcentration(AbstractFeature):
     NAME = "Complex Concentration"
 
     _num1 = r"\d*[.,]?\d+"
@@ -575,13 +575,13 @@ class ComplexConcentration(AbstractTextFeature):
         (1000, r"л"),
     ]
 
-    Numeric_Concentration = TextFeatureUnit(
+    Numeric_Concentration = FeatureUnit(
         "Complex Numeric Concentration",
         regex=rf"{_num1}\s*{_top}\s*{_sep}\s*{_num2}\s*{_bot}",
         weight=0.1,
     )
 
-    Percent_Concentration = TextFeatureUnit(
+    Percent_Concentration = FeatureUnit(
         "Complex Percent Concentation",
         weight=1,
         regex=rf"{_num1}\s*%",
@@ -590,7 +590,7 @@ class ComplexConcentration(AbstractTextFeature):
     def __init__(
         self,
         value: str,
-        unit: TextFeatureUnit,
+        unit: FeatureUnit,
     ) -> None:
         self.original_value = value
         self.standard_weight = 1
@@ -651,7 +651,7 @@ class ComplexConcentration(AbstractTextFeature):
 
     @classmethod
     @property
-    def units(self) -> list[TextFeatureUnit]:
+    def units(self) -> list[FeatureUnit]:
         return [
             self.Numeric_Concentration,
             self.Percent_Concentration,

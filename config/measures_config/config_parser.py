@@ -3,11 +3,12 @@ from enum import Enum
 
 class CONFIG(object):
     NAME = "config_name"
-    MEASURES = "measures"
 
     NUMERIC_MEASURES = "numeric_measures"
     STRING_MEASURES = "string_measures"
     COMPLEX_MEASURES = "complex_measures"
+
+    MEASURES = "measures"
 
     USE_IT = "use_it"
 
@@ -46,12 +47,12 @@ class DATA(object):
     COMMON_POSTFIX = "common_postfix"
     COMMON_MAX_COUNT = "common_max_count"
     SPECIAL_VALUE_SEARCH = "special_value_search"
-    FEATURES = "features"
+    UNITS = "units"
 
 
-class FEATURE(object):
-    NAME = "feature_name"
-    DEFENITION = "defenition"
+class UNIT(object):
+    NAME = "unit_name"
+    SYMBOL = "symbol"
     RWEIGHT = "relative_weight"
     PREFIX = "prefix"
     POSTFIX = "postfix"

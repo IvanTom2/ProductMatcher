@@ -9,7 +9,7 @@ tqdm.pandas()
 PROJECT_DIR = Path(__file__).parent.parent.parent
 sys.path.append(str(PROJECT_DIR))
 
-from src.fuzzy_v.tokenization import Token, TokenTransformer
+from src.simfyzer.tokenization import Token, TokenTransformer
 
 
 def setup_tasks(

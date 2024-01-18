@@ -9,8 +9,8 @@ from pathlib import Path
 PROJECT_DIR = Path(__file__).parent.parent.parent
 sys.path.append(str(PROJECT_DIR))
 
-from src.fuzzy_v.strmod.word_extraction import WordsExtractor, LanguageRules
-from src.fuzzy_v.strmod.word_extraction_funcs import LanguageType
+from src.functool.words_functool import LanguageRules, LanguageType
+from src.functool.word_extraction import WordsExtractor
 
 WeightsRules = namedtuple("WeightRule", ["rules", "weight"])
 

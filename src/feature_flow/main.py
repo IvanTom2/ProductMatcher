@@ -18,10 +18,10 @@ PROJ_DIR = SRC_DIR.parent
 sys.path.append(str(PROJ_DIR))
 
 from src.notation import FEATURES
-from src.feature_v.feature_generator import FeatureGenerator
-from src.feature_v.feature_functool import (
-    AbstractTextFeature,
-    TextFeatureUnit,
+from src.feature_flow.feature_generator import FeatureGenerator
+from src.feature_flow.feature_functool import (
+    AbstractFeature,
+    FeatureUnit,
     FeatureList,
     FeatureValidationMode,
     NotFoundStatus,
@@ -30,7 +30,7 @@ from src.feature_v.feature_functool import (
 warnings.filterwarnings("ignore")
 
 
-class AbstractTextFeatureValidator(ABC):
+class AbstractFeatureFlow(ABC):
     def __init__(self) -> None:
         pass
 
@@ -39,12 +39,12 @@ class AbstractTextFeatureValidator(ABC):
         pass
 
 
-class TextFeatureValidator(AbstractTextFeatureValidator):
+class FeatureFlow(AbstractFeatureFlow):
     def __init__(
         self,
         client_column: str,
         source_column: str,
-        features_list: list[AbstractTextFeature],
+        features_list: list[AbstractFeature],
         skip_intermediate_validated: bool = True,
     ) -> None:
         self.CLIENT_NAME = client_column
@@ -56,8 +56,8 @@ class TextFeatureValidator(AbstractTextFeatureValidator):
     def _preproccess(
         self,
         values: list[str],
-        feature: AbstractTextFeature,
-        unit: TextFeatureUnit,
+        feature: AbstractFeature,
+        unit: FeatureUnit,
     ) -> list:
         return [feature(value, unit) for value in values]
 
@@ -79,27 +79,27 @@ class TextFeatureValidator(AbstractTextFeatureValidator):
 
         return data
 
-    def _findall(self, cell: str, unit: TextFeatureUnit) -> list[str]:
+    def _findall(self, cell: str, unit: FeatureUnit) -> list[str]:
         output = re.findall(unit.regex, str(cell), re.IGNORECASE)
         return output
 
     def _feature_search(
         self,
         series: pd.Series,
-        feature: AbstractTextFeature,
-        unit: TextFeatureUnit,
+        feature: AbstractFeature,
+        unit: FeatureUnit,
     ) -> pd.Series:
         series = series.apply(self._findall, args=(unit,))
         series = series.apply(self._preproccess, args=(feature, unit))
         return series
 
-    def _del_pattern(self, cell: str, unit: TextFeatureUnit) -> str:
+    def _del_pattern(self, cell: str, unit: FeatureUnit) -> str:
         return re.sub(unit.regex, "  ", cell)
 
     def _del_unit(
         self,
         series: pd.Series,
-        unit: TextFeatureUnit,
+        unit: FeatureUnit,
     ) -> pd.Series:
         series = series.apply(self._del_pattern, args=(unit,))
         return series
@@ -149,7 +149,7 @@ class TextFeatureValidator(AbstractTextFeatureValidator):
     def _intermediate_validation(
         self,
         data: pd.DataFrame,
-        feature: AbstractTextFeature,
+        feature: AbstractFeature,
     ) -> pd.DataFrame:
         cif_massive = map(set, data[FEATURES.CI].to_list())
         sif_massive = map(set, data[FEATURES.SI].to_list())
@@ -167,7 +167,7 @@ class TextFeatureValidator(AbstractTextFeatureValidator):
 
     def _extract(self, data: pd.DataFrame) -> pd.DataFrame:
         for feature in self.features:
-            feature: AbstractTextFeature
+            feature: AbstractFeature
 
             data[FEATURES.CI] = [[] for _ in range(len(data))]
             data[FEATURES.SI] = [[] for _ in range(len(data))]
@@ -235,12 +235,14 @@ if __name__ == "__main__":
         # "Консервы 10шт",
         # "Пальто синее",
         # "Пальто зеленое",
-        "Таблетка 1мг/мл",
-        "Таблетка 1мг/мл",
-        "Таблетка 1г/мл",
-        "Таблетка 1%",
-        "Таблетка 1%",
-        "Таблетка 100мг/5мл",
+        # "Таблетка 1мг/мл",
+        # "Таблетка 1мг/мл",
+        # "Таблетка 1г/мл",
+        # "Таблетка 1%",
+        # "Таблетка 1%",
+        # "Таблетка 100мг/5мл",
+        "Пальто красное",
+        "Пальто красное",
     ]
     df["Название сайт"] = [
         # "Сок 1000мл",
@@ -251,12 +253,14 @@ if __name__ == "__main__":
         # "Консервы 9шт",
         # "Пальто синее",
         # "Пальто красное",
-        "Таблетка 0.001г/мл",
-        "Таблетка 1000мкг/мл",
-        "Таблетка 1000мг/мл",
-        "Таблетка 10мг/мл",
-        "Таблетка 0.01г/мл",
-        "Таблетка 200мг/10мл",
+        # "Таблетка 0.001г/мл",
+        # "Таблетка 1000мкг/мл",
+        # "Таблетка 1000мг/мл",
+        # "Таблетка 10мг/мл",
+        # "Таблетка 0.01г/мл",
+        # "Таблетка 200мг/10мл",
+        "Пальто красное",
+        "Пальто зеленое",
     ]
 
     config = read_config(
@@ -264,7 +268,7 @@ if __name__ == "__main__":
     )
     features = FeatureGenerator().generate(config)
 
-    validator = TextFeatureValidator(
+    validator = FeatureFlow(
         "Название клиент",
         "Название сайт",
         features_list=features,

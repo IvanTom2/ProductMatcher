@@ -1,29 +1,44 @@
-import json
 import sys
+import json
+import numpy as np
 import regex as re
 import pandas as pd
-import numpy as np
+
 from pathlib import Path
-from typing import Any
 from decimal import Decimal
-from collections import namedtuple
-from typing import Union
 from abc import abstractmethod
+from typing import Tuple, List
 
 SRC_DIR = Path(__file__).parent.parent
 PROJECT_DIR = SRC_DIR.parent
-
 sys.path.append(str(PROJECT_DIR))
+
+from src.notation import SEMANTIC
 from config.measures_config.config_parser import (
     CONFIG,
     MEASURE,
     DATA,
-    FEATURE,
+    UNIT,
     AUTOSEM_CONF,
 )
 
+EXCLUDE_RX_NAME_PREFIX = "Исключ. "
+EXCLUDE_RX_PATTER = r"(?!.*("
+EXCLUDE_RX_PATTER_CARET = r"^(?!.*("
+
 
 class SearchMode(object):
+    """Measure Search Mode\n
+    Using for determing position of search value (\d+)
+
+    Mode can be:
+        - front : in front of Unit Symbol
+        - behind : behind Unit Symbol
+
+    Default mode:
+        - behind
+    """
+
     FRONT = "front"
     BEHIND = "behind"
     modes = {FRONT, BEHIND}
@@ -31,90 +46,111 @@ class SearchMode(object):
     default = BEHIND
 
     @classmethod
-    def checkout(self, mode: str) -> str:
+    def checkout(cls, mode: str) -> str:
+        """
+        Check search mode and return standardized value\n
+        If the input mode have wrond value -> return default mode
+        """
+
         mode = str(mode).lower()
-        if mode not in self.modes:
-            mode = self.default
+        if mode not in cls.modes:
+            mode = cls.default
         return mode
 
 
 class MergeMode(object):
+    """Measure Merge Mode\n
+    Using for merging units to one regex
+
+    Mode can be:
+        - none : no merging
+        - overall : merge all units
+        - num : '1' merging one left and one right unit (ug <- mg -> g)
+
+    Default mode:
+        - overall
+
+    """
+
     NONE = "none"
     OVERALL = "overall"
     modes = {OVERALL, NONE}
-    # also mode can be presented as number
 
     default = "overall"
 
     @classmethod
-    def checkout(self, mode: str) -> str:
+    def checkout(cls, mode: str) -> str:
         mode = str(mode).lower()
-        if mode not in self.modes:
+        if mode not in cls.modes:
             if not mode.isnumeric():
-                mode = self.default
+                mode = cls.default
         return mode
 
 
 class CommonValues(object):
+    """
+    Determine if unit config value should
+    be determined as common measure value\n
+    It can be common Prefix or Postfix
+    """
+
     COMMON = "common"
 
-    def is_common(self, value: Union[int, str]) -> bool:
+    def is_common(self, value: int | str) -> bool:
         if value == self.COMMON:
             return True
         return False
 
 
-class AbstractMeasureFeature(object):
+class AbstractUnit(object):
     name: str
-    defenition: str
+    symbol: str
     relative_weight: str
     search_mode: str
     prefix: str
     postfix: str
 
 
-class MeasureFeature(AbstractMeasureFeature):
+class Unit(AbstractUnit):
+    """Abstract Measure Unit"""
+
     def __init__(
         self,
-        feature_data: dict,
+        unit_data: dict,
         common_prefix: str,
         common_postfix: str,
         common_max_count: str,
         special_value_search: str,
     ) -> None:
-        FD = feature_data
+        UD = unit_data
         CV = CommonValues()
 
-        self.name = FD[FEATURE.NAME]
-        self.defenition = FD[FEATURE.DEFENITION]
-        self.relative_weight = Decimal(str(FD[FEATURE.RWEIGHT]))
+        self.name = UD[UNIT.NAME]
+        self.symbol = UD[UNIT.SYMBOL]
+        self.relative_weight = Decimal(str(UD[UNIT.RWEIGHT]))
 
         self.search_mode = (
-            SearchMode.checkout(FD[FEATURE.SEARCH_MODE])
-            if FEATURE.SEARCH_MODE in FD
+            SearchMode.checkout(UD[UNIT.SEARCH_MODE])
+            if UNIT.SEARCH_MODE in UD
             else SearchMode.default
         )
 
         self.prefix = (
-            FD[FEATURE.PREFIX]
-            if not CV.is_common(FD[FEATURE.PREFIX])
-            else common_prefix
+            UD[UNIT.PREFIX] if not CV.is_common(UD[UNIT.PREFIX]) else common_prefix
         )
 
         self.postfix = (
-            FD[FEATURE.POSTFIX]
-            if not CV.is_common(FD[FEATURE.POSTFIX])
-            else common_postfix
+            UD[UNIT.POSTFIX] if not CV.is_common(UD[UNIT.POSTFIX]) else common_postfix
         )
 
         self.max_count = (
-            FD[FEATURE.MAX_COUNT]
-            if not CV.is_common(FD[FEATURE.MAX_COUNT])
+            UD[UNIT.MAX_COUNT]
+            if not CV.is_common(UD[UNIT.MAX_COUNT])
             else common_max_count
         )
 
         self._search_rx = self._make_search_rx(special_value_search)
-        self.allocated_features = [self]
+        self.allocated_units = [self]
 
     def get_search_regex(self) -> str:
         return self._search_rx
@@ -134,15 +170,15 @@ class MeasureFeature(AbstractMeasureFeature):
 
     def _make_search_rx(self, special_value_search: str) -> str:
         DVS = self._default_search()  # default value search
-        vsrch = DVS
+        value_srch = DVS
 
         if special_value_search:
-            vsrch = special_value_search
+            value_srch = special_value_search
 
         if self.search_mode == SearchMode.BEHIND:
-            rx = rf"{self.prefix}{vsrch}\s*(?:{self.defenition}){self.postfix}"
+            rx = rf"{self.prefix}{value_srch}\s*(?:{self.symbol}){self.postfix}"
         else:
-            rx = rf"{self.prefix}(?:{self.defenition})\s*{vsrch}{self.postfix}"
+            rx = rf"{self.prefix}(?:{self.symbol})\s*{value_srch}{self.postfix}"
 
         return rx
 
@@ -170,8 +206,8 @@ class MeasureFeature(AbstractMeasureFeature):
 
         return extracted_values
 
-    def add_relative(self, features) -> None:
-        self.allocated_features.extend(features)
+    def add_relative(self, units: list[AbstractUnit]) -> None:
+        self.allocated_units.extend(units)
 
     @abstractmethod
     def transform(
@@ -183,15 +219,15 @@ class MeasureFeature(AbstractMeasureFeature):
     def __repr__(self) -> str:
         _return = []
         _return.append(f"name: {self.name}")
-        _return.append(f"defenition: {self.defenition}")
+        _return.append(f"symbol: {self.symbol}")
         _return.append(f"relative_weight: {self.relative_weight}")
         _return.append(f"prefix: '{self.prefix}'")
         _return.append(f"postfix: '{self.postfix}'\n")
         return "\n".join(_return)
 
 
-class StringFeature(MeasureFeature):
-    def _default_search(self):
+class StringUnit(Unit):
+    def _default_search(self) -> str:
         return ""
 
     def _to_regex(self, values: list[str]) -> list[str]:
@@ -211,8 +247,8 @@ class StringFeature(MeasureFeature):
         return list(regex_values)
 
 
-class NumericFeature(MeasureFeature):
-    def _default_search(self):
+class NumericUnit(Unit):
+    def _default_search(self) -> str:
         return r"\d*[.,]?\d+"
 
     def _extract_numeric_values(self, values: list[str]) -> list[str]:
@@ -237,42 +273,39 @@ class NumericFeature(MeasureFeature):
 
     def _to_regex(self, numeric_values: list[str]) -> list[str]:
         regexes = []
-        features: list[AbstractMeasureFeature] = self.allocated_features
-
-        worked_features = set()
+        units: list[AbstractUnit] = self.allocated_units
 
         for numeric_value in numeric_values:
             rx_parts = []
-            for feature in features:
+            for unit in units:
                 num: Decimal = numeric_value * (
-                    self.relative_weight / feature.relative_weight
+                    self.relative_weight / unit.relative_weight
                 )
                 num = self._prepare_num(num)
 
-                if feature.search_mode == SearchMode.BEHIND:
+                if unit.search_mode == SearchMode.BEHIND:
                     rx_part = (
-                        feature.prefix
+                        unit.prefix
                         + num
                         + r"\s*"
                         + r"(?:"
-                        + feature.defenition
+                        + unit.symbol
                         + r")"
-                        + feature.postfix
+                        + unit.postfix
                     )
 
                 else:
                     rx_part = (
-                        feature.prefix
+                        unit.prefix
                         + r"(?:"
-                        + feature.defenition
+                        + unit.symbol
                         + ")"
                         + r"\s*"
                         + num
-                        + feature.postfix
+                        + unit.postfix
                     )
 
                 rx_parts.append(rx_part)
-                worked_features.add(feature.name)
 
             regexes.append("|".join(rx_parts))
 
@@ -295,9 +328,9 @@ class NumericFeature(MeasureFeature):
         return list(regex_values)
 
 
-class FeatureType(object):
-    NUMERIC = "numeric_feature"
-    STRING = "string_feature"
+class UnitType(object):
+    NUMERIC = "numeric_unit"
+    STRING = "string_unit"
 
     __mapper = {
         CONFIG.NUMERIC_MEASURES: NUMERIC,
@@ -305,14 +338,14 @@ class FeatureType(object):
     }
 
     __type = {
-        NUMERIC: NumericFeature,
-        STRING: StringFeature,
+        NUMERIC: NumericUnit,
+        STRING: StringUnit,
     }
 
     def __init__(self, measure_type: str) -> None:
         self._type = self.__mapper[measure_type]
 
-    def type(self) -> MeasureFeature:
+    def type(self) -> Unit:
         return self.__type[self._type]
 
 
@@ -330,49 +363,50 @@ class Measure(object):
         self.measure_type = measure_type
         self.exclude_rx = exclude_rx
 
-        self.features = self._create_features(measure_data)
-        self._sort_features()
-        self._allocate_relative_features()
+        self.units = self._create_units(measure_data)
+        self._sort_units()
+        self._allocate_relative_units()
 
     def __iter__(self):
         self.__i = 0
         return self
 
-    def __next__(self) -> MeasureFeature:
-        if self.__i >= len(self.features):
+    def __next__(self) -> Unit:
+        if self.__i >= len(self.units):
             raise StopIteration
         else:
-            item = self.features[self.__i]
+            item = self.units[self.__i]
             self.__i += 1
             return item
 
     def __len__(self) -> int:
-        return len(self.features)
+        return len(self.units)
 
-    def __getitem__(self, index: int) -> MeasureFeature:
-        if index >= len(self.features):
+    def __getitem__(self, index: int) -> Unit:
+        if index >= len(self.units):
             raise IndexError()
         else:
-            return self.features[index]
+            return self.units[index]
 
     def __repr__(self) -> str:
         return self.name
 
-    def _create_features(self, measure_data: dict) -> list[MeasureFeature]:
+    def _create_units(self, measure_data: dict) -> list[Unit]:
         common_prefix = measure_data[DATA.COMMON_PREFIX]
         common_postfix = measure_data[DATA.COMMON_POSTFIX]
         common_max_count = measure_data[DATA.COMMON_MAX_COUNT]
         special_value_search = measure_data[DATA.SPECIAL_VALUE_SEARCH]
-        feature_type = FeatureType(self.measure_type)
 
-        features = []
-        for feature_data in measure_data[DATA.FEATURES]:
-            if feature_data[FEATURE.USE_IT]:
-                type = feature_type.type()
+        unit_type = UnitType(self.measure_type)
 
-                features.append(
+        units = []
+        for unit_data in measure_data[DATA.UNITS]:
+            if unit_data[UNIT.USE_IT]:
+                type = unit_type.type()
+
+                units.append(
                     type(
-                        feature_data,
+                        unit_data,
                         common_prefix,
                         common_postfix,
                         common_max_count,
@@ -380,47 +414,48 @@ class Measure(object):
                     )
                 )
 
-        return features
+        return units
 
-    def _sort_features(self) -> None:
-        self.features.sort(key=lambda ft: ft.relative_weight)
+    def _sort_units(self) -> None:
+        self.units.sort(key=lambda unit: unit.relative_weight)
 
-    def _allocate_relative_features(self) -> None:
+    def _allocate_relative_units(self) -> None:
         if self.merge_mode == MergeMode.NONE:
             pass
 
         elif self.merge_mode == MergeMode.OVERALL:
-            for feature in self.features:
-                other_features = [f for f in self.features if f != feature]
-                feature.add_relative(other_features)
+            for unit in self.units:
+                other_units = [u for u in self.units if u != unit]
+                unit.add_relative(other_units)
 
         else:
             shift = int(self.merge_mode)
-            for index in range(len(self.features)):
-                feature = self.features[index]
-                maxlen = len(self.features)
+            for index in range(len(self.units)):
+                unit = self.units[index]
+                maxlen = len(self.units)
 
-                left = self.features[max(0, index - shift) : index]
-                right = self.features[
+                left = self.units[max(0, index - shift) : index]
+                right = self.units[
                     min(index + 1, maxlen) : min(index + shift + 1, maxlen)
                 ]
 
-                other_features = left + right
-                other_features = [f for f in other_features if f != feature]
+                other_units = left + right
+                other_units = [u for u in other_units if u != unit]
 
-                feature.add_relative(other_features)
+                unit.add_relative(other_units)
 
     def _make_exclude_rx(self) -> pd.DataFrame:
         behind = ""
         front = ""
-        for feature in self.features:
-            search_mode = feature.search_mode
-            if search_mode == SearchMode.BEHIND:
-                behind += feature.defenition
-            else:
-                front += feature.defenition
 
-        rx = r"^(?!.*("
+        for unit in self.units:
+            search_mode = unit.search_mode
+            if search_mode == SearchMode.BEHIND:
+                behind += unit.symbol
+            else:
+                front += unit.symbol
+
+        rx = EXCLUDE_RX_PATTER_CARET
         if behind:
             rx += r"(?:[0-9][0-9]\d*|[2-9]\d*?)\s*" + "(?:" + behind + ")"
 
@@ -435,13 +470,13 @@ class Measure(object):
     def _add_exclude_rx(
         self,
         data: pd.DataFrame,
-        feature_names: list[str],
-        new_feature_name: str,
+        units_names: list[str],
+        new_unit_name: str,
     ) -> pd.DataFrame:
         exclude_rx = self._make_exclude_rx()
 
-        data.loc[:, new_feature_name] = np.where(
-            data[feature_names].apply(lambda r: r.str.strip().eq("").all(), axis=1),
+        data.loc[:, new_unit_name] = np.where(
+            data[units_names].apply(lambda r: r.str.strip().eq("").all(), axis=1),
             exclude_rx,
             "",
         )
@@ -452,24 +487,24 @@ class Measure(object):
         self,
         data: pd.DataFrame,
         column: str,
-    ) -> pd.DataFrame:
-        feature_names = []
+    ) -> Tuple[pd.DataFrame, List[str]]:
+        units_names = []
         extract_from = data[column].to_list()
 
-        for feature in self.features:
-            extracted_values = feature.extract(extract_from)
-            extracted_values = feature.filter_count(extracted_values)
-            rx_patterns = feature.transform(extracted_values)
+        for unit in self.units:
+            extracted_values = unit.extract(extract_from)
+            extracted_values = unit.filter_count(extracted_values)
+            rx_patterns = unit.transform(extracted_values)
 
-            data.loc[:, feature.name] = rx_patterns
-            feature_names.append(feature.name)
+            data.loc[:, unit.name] = rx_patterns
+            units_names.append(unit.name)
 
         if self.exclude_rx:
-            new_feature_name = "Исключ. " + self.name
-            data = self._add_exclude_rx(data, feature_names, new_feature_name)
-            feature_names.append(new_feature_name)
+            new_unit_name = EXCLUDE_RX_NAME_PREFIX + self.name
+            data = self._add_exclude_rx(data, units_names, new_unit_name)
+            units_names.append(new_unit_name)
 
-        return data, feature_names
+        return data, units_names
 
 
 class Measures(object):
@@ -487,7 +522,7 @@ class Measures(object):
         self.measures = self._create_measures(config)
         self.measures_names = list(self.measures.keys())
 
-        self.used_feature_names = []
+        self.used_units_names = []
 
     def __iter__(self):
         self.__iterbale = list(self.measures.keys())
@@ -506,7 +541,7 @@ class Measures(object):
     def __len__(self) -> int:
         return len(self.measures)
 
-    def __getitem__(self, subscript: Union[int, str]) -> Measure:
+    def __getitem__(self, subscript: int | str) -> Measure:
         if isinstance(subscript, int):
             if subscript >= len(self.measures):
                 raise IndexError
@@ -521,8 +556,10 @@ class Measures(object):
                 raise KeyError
 
     def _create_measures(self, config: dict) -> dict[str, Measure]:
-        """Parse config and create dict with Measure objects
-        accorging to parsed rules"""
+        """
+        Parse config and create dict with
+        Measures objects accorging to parsed rules
+        """
 
         measures_list = {}
         for MEASURE_TYPE in CONFIG.MEASURE_TYPES:
@@ -553,12 +590,12 @@ class Measures(object):
         """Extract regex by measure name"""
 
         measure = self.measures[measure_name]
-        data, feature_names = measure.extract(data, column)
+        data, units_names = measure.extract(data, column)
 
-        extracted = data[feature_names[0]]
-        if len(feature_names) >= 2:
-            for feature_name in feature_names[1:]:
-                extracted += data[feature_name]
+        extracted = data[units_names[0]]
+        if len(units_names) >= 2:
+            for unit_name in units_names[1:]:
+                extracted += data[unit_name]
 
         return extracted
 
@@ -571,23 +608,62 @@ class Measures(object):
 
         for measure_name in self.measures_names:
             measure = self.measures[measure_name]
-            data, feature_names = measure.extract(data, column)
+            data, units_names = measure.extract(data, column)
 
-            self.used_feature_names.extend(feature_names)
+            self.used_units_names.extend(units_names)
 
         return data
+
+    def _concat_exlcude_rx(
+        self,
+        data: pd.DataFrame,
+        used_units_names: list[str],
+    ) -> pd.DataFrame:
+        def is_empty(row: str) -> bool:
+            if row == "":
+                return False
+            return True
+
+        exclude = []
+        for unit_name in used_units_names:
+            if EXCLUDE_RX_NAME_PREFIX in unit_name:
+                exclude.append(unit_name)
+
+        for unit_name in exclude:
+            used_units_names.remove(unit_name)
+
+        data["__temp"] = ""
+        for unit_name in exclude:
+            data["__temp"] += data[unit_name]
+
+        data.loc[data["__temp"].apply(is_empty), SEMANTIC.REGEX] += "^"
+
+        for unit_name in exclude:
+            data[SEMANTIC.REGEX] += data[unit_name].str.replace(
+                EXCLUDE_RX_PATTER_CARET,
+                EXCLUDE_RX_PATTER,
+                n=1,
+                regex=False,
+            )
+
+        data = data.drop(["__temp"], axis=1)
+        return data, used_units_names
 
     def concat_regex(
         self,
         data: pd.DataFrame,
-        delete_features_columns: bool = False,
+        delete_units_columns: bool = False,
     ) -> pd.DataFrame:
-        data["regex"] = ""
-        for feature_name in self.used_feature_names:
-            data["regex"] += data[feature_name]
+        data[SEMANTIC.REGEX] = ""
+        used_units_names = self.used_units_names
 
-        if delete_features_columns:
-            data = data.drop(self.used_feature_names, axis=1)
+        data, used_units_names = self._concat_exlcude_rx(data, used_units_names)
+
+        for unit_name in self.used_units_names:
+            data[SEMANTIC.REGEX] += data[unit_name]
+
+        if delete_units_columns:
+            data = data.drop(self.used_units_names, axis=1)
 
         return data
 
@@ -646,3 +722,4 @@ if __name__ == "__main__":
     data = measures.concat_regex(data, True)
 
     print(data)
+    print(data.at[0, "regex"])

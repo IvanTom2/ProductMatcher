@@ -12,10 +12,10 @@ PROJECT_DIR = SRC_DIR.parent
 sys.path.append(str(PROJECT_DIR))
 
 from src.notation import JAKKAR, DATA
-from src.fuzzy_v.preprocessing import Preprocessor
-from src.fuzzy_v.fuzzy_search import FuzzySearch
-from src.fuzzy_v.ratio import RateCounter, MarksCounter, MarksMode, RateFunction
-from src.fuzzy_v.tokenization import (
+from src.simfyzer.preprocessing import Preprocessor
+from src.simfyzer.fuzzy_search import FuzzySearch
+from src.simfyzer.ratio import RateCounter, MarksCounter, MarksMode, RateFunction
+from src.simfyzer.tokenization import (
     BasicTokenizer,
     TokenTransformer,
     RegexTokenizer,
@@ -30,7 +30,7 @@ from config.fuzzy_config.config_parser import (
 )
 
 
-class FuzzyJakkarValidator(object):
+class SimFyzer(object):
     def __init__(
         self,
         tokenizer: BasicTokenizer,
@@ -215,11 +215,11 @@ class FuzzyJakkarValidator(object):
         return data
 
 
-def setup_jakkar_validator(
+def setup_SymFyzer(
     config: dict,
     fuzzy_threshold: float,
     validation_threshold: float,
-) -> FuzzyJakkarValidator:
+) -> SimFyzer:
     regex_weights = RegexCustomWeights(
         config[CONFIG.REGEX_WEIGHTS][REGEX_WEIGHTS.CAPS],
         config[CONFIG.REGEX_WEIGHTS][REGEX_WEIGHTS.CAPITAL],
@@ -247,7 +247,7 @@ def setup_jakkar_validator(
     fuzzy = FuzzySearch(fuzzy_threshold, transformer=transformer)
     marks_counter = MarksCounter(MarksMode.MULTIPLE)
 
-    fuzzy_validator = FuzzyJakkarValidator(
+    simfyzer = SimFyzer(
         tokenizer=tokenizer,
         preprocessor=preprocessor,
         fuzzy=fuzzy,
@@ -255,7 +255,7 @@ def setup_jakkar_validator(
         marks_counter=marks_counter,
         validation_treshold=validation_threshold,
     )
-    return fuzzy_validator
+    return simfyzer
 
 
 def read_config(path: str | Path) -> dict:
@@ -271,7 +271,7 @@ if __name__ == "__main__":
         "/home/mainus/Projects/ProductMatcher/config/fuzzy_config/setups/main.json"
     )
 
-    validator = setup_jakkar_validator(config, 0.75, 0.5)
+    validator = setup_SymFyzer(config, 0.75, 0.5)
     data: pd.DataFrame = validator.validate(
         data,
         "Строка валидации",
