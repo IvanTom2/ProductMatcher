@@ -1,8 +1,12 @@
 import sys
 import pytest
+import time
+import multiprocessing
 import regex as re
 import pandas as pd
 from pathlib import Path
+
+import cProfile
 
 
 PROJECT_DIR = Path(__file__).parent.parent.parent
@@ -24,6 +28,7 @@ MAX_ERROR_RATE = 0.97
 
 class BaseTestFuzzyV(object):
     debug = False
+    process_pool = None
 
     def validator(
         self,
@@ -55,7 +60,12 @@ class BaseTestFuzzyV(object):
         data: pd.DataFrame,
         validator: SimFyzer,
     ):
-        data = validator.validate(data, CLIENT_PRODUCT, SOURCE_PRODUCT)
+        data = validator.validate(
+            data,
+            CLIENT_PRODUCT,
+            SOURCE_PRODUCT,
+            self.process_pool,
+        )
         assert self.checkout(data)
 
 
@@ -74,8 +84,14 @@ class FuzzyVGenericsTestsDebug(TestFuzzyVGenerics):
     def __init__(self) -> None:
         super().__init__()
         self.debug = True
+        self.process_pool = None
+        # self.process_pool = multiprocessing.Pool(4)
 
 
 if __name__ == "__main__":
+    start = time.time()
+
     test = FuzzyVGenericsTestsDebug()
     test.test_generics_fuzzy_validation()
+
+    print("EXEC TIME", time.time() - start)
