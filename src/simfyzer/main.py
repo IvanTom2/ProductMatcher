@@ -54,6 +54,8 @@ class SimFyzer(object):
 
         self.symbols_to_del = r"'\"/"
 
+        self._process_pool = None
+
     def _progress_ind(self, indicator: str) -> None:
         match indicator:
             case "start":
@@ -147,6 +149,7 @@ class SimFyzer(object):
             data,
             JAKKAR.CLIENT_TOKENS,
             JAKKAR.SOURCE_TOKENS,
+            self._process_pool,
         )
         return data
 
@@ -187,7 +190,9 @@ class SimFyzer(object):
         data: pd.DataFrame,
         client_column: str,
         source_column: str,
+        process_pool: multiprocessing.Pool = None,
     ) -> pd.DataFrame:
+        self._process_pool = process_pool
         data = self._create_working_rows(data, client_column, source_column)
 
         data = self._process_tokenization(data)
@@ -272,9 +277,12 @@ if __name__ == "__main__":
     )
 
     validator = setup_SymFyzer(config, 0.75, 0.5)
+    process_pool = multiprocessing.Pool(4)
+
     data: pd.DataFrame = validator.validate(
         data,
         "Строка валидации",
         "Наименование товара клиента",
+        # process_pool,
     )
     data.to_excel("jakkar_check.xlsx")
