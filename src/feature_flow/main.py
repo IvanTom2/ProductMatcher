@@ -1,14 +1,15 @@
 import sys
 import json
 import warnings
-
+import multiprocessing
 import regex as re
 import pandas as pd
 
 from abc import ABC, abstractmethod
-from typing import Union
+from typing import Union, Set
 from pathlib import Path
 from tqdm import tqdm
+from functools import partial
 
 tqdm.pandas()
 
@@ -39,6 +40,23 @@ class AbstractFeatureFlow(ABC):
         pass
 
 
+def findall_func(cell: str, unit: FeatureUnit) -> list[str]:
+    output = re.findall(unit.regex, str(cell), re.IGNORECASE)
+    return output
+
+
+def preproccess_func(
+    values: list[str],
+    feature: AbstractFeature,
+    unit: FeatureUnit,
+) -> list[AbstractFeature]:
+    return [feature(value, unit) for value in values]
+
+
+def del_pattern_func(cell: str, unit: FeatureUnit) -> str:
+    return re.sub(unit.regex, "  ", cell)
+
+
 class FeatureFlow(AbstractFeatureFlow):
     def __init__(
         self,
@@ -53,17 +71,17 @@ class FeatureFlow(AbstractFeatureFlow):
         self.skip_intermediate_validated = skip_intermediate_validated
         self.features = FeatureList(features_list)
 
-    def _preproccess(
-        self,
-        values: list[str],
-        feature: AbstractFeature,
-        unit: FeatureUnit,
-    ) -> list:
-        return [feature(value, unit) for value in values]
+        self._process_pool = None
 
     def _data_preprocess(self, data: pd.DataFrame) -> pd.DataFrame:
-        data[FEATURES.CLIENT_NAME] = "  " + data[self.CLIENT_NAME] + "   "
-        data[FEATURES.SOURCE_NAME] = "  " + data[self.SOURCE_NAME] + "   "
+        data[FEATURES.VALIDATED] = 1
+
+        data.loc[:, FEATURES.CLIENT] = [[] for _ in range(len(data))]
+        data.loc[:, FEATURES.SOURCE] = [[] for _ in range(len(data))]
+
+        data.loc[:, FEATURES.CLIENT_NAME] = "  " + data[self.CLIENT_NAME] + "   "
+        data.loc[:, FEATURES.SOURCE_NAME] = "  " + data[self.SOURCE_NAME] + "   "
+
         return data
 
     def _data_clean(self, data: pd.DataFrame) -> pd.DataFrame:
@@ -71,38 +89,55 @@ class FeatureFlow(AbstractFeatureFlow):
             [
                 FEATURES.CLIENT_NAME,
                 FEATURES.SOURCE_NAME,
-                FEATURES.CI,
-                FEATURES.SI,
             ],
             axis=1,
         )
 
         return data
 
-    def _findall(self, cell: str, unit: FeatureUnit) -> list[str]:
-        output = re.findall(unit.regex, str(cell), re.IGNORECASE)
-        return output
-
     def _feature_search(
         self,
-        series: pd.Series,
+        data: list[str],
+        unit: FeatureUnit,
+    ) -> list[list[str]]:
+        func = partial(findall_func, unit=unit)
+
+        if self._process_pool != None:
+            features = self._process_pool.map(func, data)
+        else:
+            features = map(lambda x: func(x), data)
+
+        return features
+
+    def _feature_preprocess(
+        self,
+        data: list[list[str]],
         feature: AbstractFeature,
         unit: FeatureUnit,
-    ) -> pd.Series:
-        series = series.apply(self._findall, args=(unit,))
-        series = series.apply(self._preproccess, args=(feature, unit))
-        return series
+    ) -> list[AbstractFeature]:
+        func = partial(preproccess_func, feature=feature, unit=unit)
+        features = list(map(lambda x: func(x), data))
 
-    def _del_pattern(self, cell: str, unit: FeatureUnit) -> str:
-        return re.sub(unit.regex, "  ", cell)
+        # if self._process_pool:
+        #     features = self._process_pool.map(func, data)
+        # else:
+        #     features = list(map(lambda x: func(x), data))
+
+        return features
 
     def _del_unit(
         self,
-        series: pd.Series,
+        data: list[str],
         unit: FeatureUnit,
     ) -> pd.Series:
-        series = series.apply(self._del_pattern, args=(unit,))
-        return series
+        func = partial(del_pattern_func, unit=unit)
+
+        if self._process_pool:
+            data = self._process_pool.map(func, data)
+        else:
+            data = list(map(lambda x: func(x), data))
+
+        return data
 
     def _determine_based_intersection(
         self,
@@ -150,66 +185,77 @@ class FeatureFlow(AbstractFeatureFlow):
         self,
         data: pd.DataFrame,
         feature: AbstractFeature,
+        cif_massive: list[list[AbstractFeature]],
+        sif_massive: list[list[AbstractFeature]],
     ) -> pd.DataFrame:
-        cif_massive = map(set, data[FEATURES.CI].to_list())
-        sif_massive = map(set, data[FEATURES.SI].to_list())
+        cif_massive = map(set, cif_massive)
+        sif_massive = map(set, sif_massive)
+
         intermediate = data[FEATURES.VALIDATED].to_list()
+        massive = zip(intermediate, cif_massive, sif_massive)
 
         self.__feature_name = feature.NAME
         self.__val_mode = feature.VALIDATION_MODE
         self.__not_found_mode = feature.NOT_FOUND_MODE
 
-        massive = list(zip(intermediate, cif_massive, sif_massive))
-        desicions = list(map(self._intermediate_validation_func, tqdm(massive)))
-        data[FEATURES.VALIDATED] = desicions
+        decisions = list(map(self._intermediate_validation_func, tqdm(massive)))
+        data[FEATURES.VALIDATED] = decisions
 
         return data
 
+    def _add_intermediate(
+        self,
+        container: list[list[AbstractFeature]],
+        new_features: list[list[AbstractFeature]],
+    ) -> list[list[AbstractFeature]]:
+        for index in range(len(container)):
+            container[index] += new_features[index]
+        return container
+
     def _extract(self, data: pd.DataFrame) -> pd.DataFrame:
+        client = data[FEATURES.CLIENT_NAME].to_list()  # data client
+        source = data[FEATURES.SOURCE_NAME].to_list()  # data source
+
+        cfeatures = [[] for _ in range(len(data))]  # client features
+        sfeatures = [[] for _ in range(len(data))]  # source features
+
         for feature in self.features:
             feature: AbstractFeature
 
-            data[FEATURES.CI] = [[] for _ in range(len(data))]
-            data[FEATURES.SI] = [[] for _ in range(len(data))]
+            CI = [[] for _ in range(len(data))]
+            SI = [[] for _ in range(len(data))]
 
             for unit in feature.units:
-                cif = self._feature_search(
-                    data[FEATURES.CLIENT_NAME],
-                    feature,
-                    unit,
-                )
+                cif = self._feature_search(client, unit)
+                sif = self._feature_search(source, unit)
 
-                sif = self._feature_search(
-                    data[FEATURES.SOURCE_NAME],
-                    feature,
-                    unit,
-                )
+                cif = self._feature_preprocess(cif, feature, unit)
+                sif = self._feature_preprocess(sif, feature, unit)
 
-                data[FEATURES.SOURCE_NAME] = self._del_unit(
-                    data[FEATURES.SOURCE_NAME], unit
-                )
-                data[FEATURES.CLIENT_NAME] = self._del_unit(
-                    data[FEATURES.CLIENT_NAME], unit
-                )
+                client = self._del_unit(client, unit)
+                source = self._del_unit(source, unit)
 
-                data[FEATURES.CI] += cif
-                data[FEATURES.SI] += sif
+                CI = self._add_intermediate(CI, cif)
+                SI = self._add_intermediate(SI, sif)
 
-            data[FEATURES.CLIENT] += data[FEATURES.CI]
-            data[FEATURES.SOURCE] += data[FEATURES.SI]
+            cfeatures = self._add_intermediate(cfeatures, CI)
+            sfeatures = self._add_intermediate(sfeatures, SI)
 
-            data = self._intermediate_validation(data, feature)
+            data = self._intermediate_validation(data, feature, CI, SI)
+
+        data[FEATURES.CLIENT] = cfeatures
+        data[FEATURES.SOURCE] = sfeatures
+
         return data
 
     def validate(
         self,
         data: pd.DataFrame,
+        process_pool: multiprocessing.Pool = None,
     ) -> pd.DataFrame:
-        data[FEATURES.VALIDATED] = 1
-        data = self._data_preprocess(data)
+        self._process_pool = process_pool  # setup process pool
 
-        data.loc[:, FEATURES.CLIENT] = [[] for _ in range(len(data))]
-        data.loc[:, FEATURES.SOURCE] = [[] for _ in range(len(data))]
+        data = self._data_preprocess(data)
 
         data = self._extract(data)
         data = self._data_clean(data)
@@ -223,7 +269,7 @@ def read_config(path: str) -> dict:
     return data
 
 
-if __name__ == "__main__":
+def fast_test():
     df = pd.DataFrame()
 
     df["Название клиент"] = [
@@ -274,5 +320,39 @@ if __name__ == "__main__":
         features_list=features,
     )
     df = validator.validate(df)
+
+    print(df)
+
+
+if __name__ == "__main__":
+    df = pd.DataFrame()
+
+    df["Название клиент"] = [
+        "Пальто красное",
+        "Пальто красное зеленое",
+        "Пальто красное",
+        "Вода 100мл 10г",
+        "Пальто красное зеленое",
+    ]
+    df["Название сайт"] = [
+        "Пальто красное",
+        "Пальто красное зеленое",
+        "Пальто зеленое",
+        "Вода 101мл 10мг",
+        "Пальто красное синее",
+    ]
+
+    config = read_config(
+        "/home/mainus/Projects/ProductMatcher/config/measures_config/setups/main.json"
+    )
+    features = FeatureGenerator().generate(config)
+    process_pool = multiprocessing.Pool(4)
+
+    validator = FeatureFlow(
+        "Название клиент",
+        "Название сайт",
+        features_list=features,
+    )
+    df = validator.validate(df, process_pool)
 
     print(df)

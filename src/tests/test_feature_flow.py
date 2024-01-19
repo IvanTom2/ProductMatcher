@@ -1,5 +1,7 @@
 import sys
 import pytest
+import time
+import multiprocessing
 import regex as re
 import pandas as pd
 from pathlib import Path
@@ -27,6 +29,7 @@ from src.feature_flow.main import (
 
 class BaseTestFeatureFlow(object):
     debug = False
+    process_pool = None
 
     def validator(self):
         features = FeatureGenerator().generate(MEASURES_CONFIG)
@@ -50,7 +53,7 @@ class BaseTestFeatureFlow(object):
         data: pd.DataFrame,
         validator: FeatureFlow,
     ):
-        data = validator.validate(data)
+        data = validator.validate(data, self.process_pool)
         assert self.checkout(data)
 
 
@@ -58,6 +61,8 @@ class TestFeatureFlowGenerics(BaseTestFeatureFlow):
     def test_generics_feature_validation(self):
         data = pd.concat(
             [
+                # NumericDataSet.volume_data(),
+                # NumericDataSet.concentration_per_dose_data(),
                 NumericDataSet.all(),
                 StringDataSet.all(),
             ]
@@ -79,6 +84,8 @@ class FeatureFlowGenericsTestsDebug(TestFeatureFlowGenerics):
     def __init__(self) -> None:
         super().__init__()
         self.debug = True
+        self.process_pool = None
+        # self.process_pool = multiprocessing.Pool(8)
 
 
 class FeatureVCustomTestsDebug(TestFeatureFlowCustom):
@@ -88,5 +95,9 @@ class FeatureVCustomTestsDebug(TestFeatureFlowCustom):
 
 
 if __name__ == "__main__":
+    start = time.time()
+
     test = FeatureFlowGenericsTestsDebug()
     test.test_generics_feature_validation()
+
+    print("EXECUTION TIME", time.time() - start)

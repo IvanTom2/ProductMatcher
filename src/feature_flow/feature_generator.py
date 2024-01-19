@@ -225,8 +225,6 @@ class FeatureGenerator(object):
             type: Unit = self.__type_mapper[MEASURE_TYPE]
             creator_func = self.__func_mapper[MEASURE_TYPE]
 
-            print(type)
-
             if config[MEASURE_TYPE][CONFIG.USE_IT]:
                 data = config[MEASURE_TYPE]
 
