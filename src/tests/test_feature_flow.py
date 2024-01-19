@@ -1,5 +1,6 @@
 import sys
 import pytest
+import time
 import regex as re
 import pandas as pd
 from pathlib import Path
@@ -88,5 +89,9 @@ class FeatureVCustomTestsDebug(TestFeatureFlowCustom):
 
 
 if __name__ == "__main__":
+    start = time.time()
+
     test = FeatureFlowGenericsTestsDebug()
     test.test_generics_feature_validation()
+
+    print("EXEC TIME", time.time() - start)
