@@ -23,7 +23,7 @@ CONFIG_PATH = PROJECT_DIR / "config" / "measures_config" / "setups"
 
 sys.path.append(str(PROJECT_DIR))
 
-from gui_common import CommonGUI
+from gui_common import CommonGUI, RunButtonStatus
 from src.semantix.measures_extraction import MeasuresExtractor, MeasuresGracefullExit
 from src.semantix.cross_semantic import CrosserPro, LanguageRules, CrosserGracefullExit
 
@@ -32,19 +32,11 @@ SEMANTIX_CLIENT_COL = "Название клиента"
 OUTPUT_FILENAME = "Semantix_output.xlsx"
 
 
-class SemantixGracefullExit(Exception):
+class SemantixGUIGracefullExit(Exception):
     pass
 
 
-class RunButtonStatus(object):
-    RUNNIG = "Остановить"
-    STOPPED = "Начать обработку"
-    STOPPING = "Останавливаю обработку"
-
-
 class SemantixProcessRunner(QThread):
-    progress_signal = pyqtSignal(int)
-
     def __init__(
         self,
         config: str | Path,
@@ -79,8 +71,6 @@ class SemantixProcessRunner(QThread):
         self.status_callback = status_callback
         self.progress_callback = progress_callback
         self.run_button_callback = run_button_callback
-
-        self._stopped = False
 
     def upload_data(self):
         if ".csv" in self.data_path:
@@ -126,7 +116,6 @@ class SemantixProcessRunner(QThread):
     def stop_callback(self):
         self.run_button_callback(RunButtonStatus.STOPPING)
 
-        self._stopped = True
         self.extractor.stop_callback()
         self.crosser.stop_callback()
 
@@ -145,7 +134,7 @@ class SemantixProcessRunner(QThread):
             return data
 
         except MeasuresGracefullExit:
-            raise SemantixGracefullExit
+            raise SemantixGUIGracefullExit
 
     def run_cross_semantic(self, data: pd.DataFrame) -> pd.DataFrame:
         try:
@@ -154,7 +143,7 @@ class SemantixProcessRunner(QThread):
             return data
 
         except CrosserGracefullExit:
-            raise SemantixGracefullExit
+            raise SemantixGUIGracefullExit
 
     def run(self) -> None:
         try:
@@ -171,7 +160,7 @@ class SemantixProcessRunner(QThread):
             if self.run_button_callback is not None:
                 self.run_button_callback(RunButtonStatus.STOPPED)
 
-        except SemantixGracefullExit:
+        except SemantixGUIGracefullExit:
             self.call_status("Остановлено")
             self.call_progress(0)
 
@@ -192,10 +181,10 @@ class SemantixWidget(CommonGUI):
         self.config_lay = self._setup_config_layout(main_layout)
         self.cross_sem_langs = self._setup_cross_sem(main_layout)
         self.workcol_display = self._setup_runner(main_layout)
+        self.run_button = self._setup_run_button(main_layout)
 
         self.status_bar = self._setup_status_bar(main_layout)
         self.status_callback("Ожидаю запуска")
-
         self.progress_bar = self._setup_progress_bar(main_layout)
 
         self.table_lay = self._setup_table_view(main_layout)
@@ -207,15 +196,7 @@ class SemantixWidget(CommonGUI):
         workcol_layout.addWidget(workcol_label)
         workcol_layout.addWidget(self.workcol_display)
 
-        runner_layout = QHBoxLayout()
-        run_button = QPushButton(RunButtonStatus.STOPPED)
-        run_button.clicked.connect(self.run_button_handler)
-        runner_layout.addWidget(run_button)
-
         main_layout.addLayout(workcol_layout)
-        main_layout.addLayout(runner_layout)
-
-        self.run_button = run_button
         return self.workcol_display
 
     def _setup_cross_sem(self, main_layout: QVBoxLayout) -> list[QCheckBox]:
@@ -239,17 +220,6 @@ class SemantixWidget(CommonGUI):
         main_layout.addLayout(cross_sem_layout)
         return cross_sem_langs
 
-    def run_button_status(self, status: RunButtonStatus) -> None:
-        self.run_button.setText(status)
-
-    def run_button_handler(self):
-        if self.run_button.text() == RunButtonStatus.STOPPED:
-            self.run()
-        elif self.run_button.text() == RunButtonStatus.RUNNIG:
-            self.stop()
-        elif self.run_button.text() == RunButtonStatus.STOPPING:
-            pass
-
     def run(self) -> None:
         self.run_button_status(RunButtonStatus.RUNNIG)
 
@@ -271,7 +241,6 @@ class SemantixWidget(CommonGUI):
             run_button_callback=self.run_button_status,
         )
 
-        self.progress_signal.connect(self.progress_bar.setValue)
         self.extractor_stop: callable = self.extractor.stop_callback
         self.extractor.start()
 

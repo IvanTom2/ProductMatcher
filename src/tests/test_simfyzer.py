@@ -84,8 +84,8 @@ class FuzzyVGenericsTestsDebug(TestFuzzyVGenerics):
     def __init__(self) -> None:
         super().__init__()
         self.debug = True
-        self.process_pool = None
-        # self.process_pool = multiprocessing.Pool(4)
+        # self.process_pool = None
+        self.process_pool = multiprocessing.Pool(4)
 
 
 if __name__ == "__main__":

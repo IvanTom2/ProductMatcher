@@ -1,6 +1,8 @@
 import sys
+import multiprocessing
 import pandas as pd
 from pathlib import Path
+from typing import Callable
 from PyQt6.QtWidgets import (
     QVBoxLayout,
     QApplication,
@@ -9,6 +11,7 @@ from PyQt6.QtWidgets import (
     QPushButton,
     QLineEdit,
 )
+from PyQt6.QtCore import QThread
 
 GUI_DIR = Path(__file__).parent.parent
 GUI_SRC = GUI_DIR / "gui_src"
@@ -17,8 +20,8 @@ CONFIG_PATH = PROJECT_DIR / "config" / "simfyzer_config" / "setups"
 
 sys.path.append(str(PROJECT_DIR))
 
-from gui_common import CommonGUI
-from src.simfyzer.main import SimFyzer, setup_SimFyzer
+from gui_common import CommonGUI, RunButtonStatus
+from src.simfyzer.main import SimFyzer, setup_SimFyzer, SimFyzerGracefullExit
 
 
 SIMFYZER_CLIENT_COL = "Название товара"
@@ -26,7 +29,11 @@ SIMFYZER_SOURCE_COL = "Сырые данные"
 OUTPUT_FILENAME = "SimFyzer_output.xlsx"
 
 
-class SimFyzerProcessRunner(object):
+class SimFyzerGUIGracefullExit(Exception):
+    pass
+
+
+class SimFyzerProcessRunner(QThread):
     def __init__(
         self,
         config: str | Path,
@@ -35,15 +42,29 @@ class SimFyzerProcessRunner(object):
         source_column: str,
         fuzzy_threshold: int,
         validation_threshold: 1,
+        process_pool: multiprocessing.Pool = None,
+        status_callback: Callable = None,
+        progress_callback: Callable = None,
+        run_button_callback: Callable = None,
     ) -> None:
+        super().__init__()
+
         self.client_column = client_column
         self.source_column = source_column
 
+        self._process_pool = process_pool
+
+        self.status_callback = status_callback
+        self.progress_callback = progress_callback
+        self.run_button_callback = run_button_callback
+
         self.data_path = data_path
-        self.fuzzy_validator = setup_SimFyzer(
+        self.validator = setup_SimFyzer(
             config,
             float(fuzzy_threshold),
             float(validation_threshold),
+            self.status_callback,
+            self.progress_callback,
         )
 
     def upload_data(self):
@@ -55,16 +76,57 @@ class SimFyzerProcessRunner(object):
             raise ValueError("File should be Excel or csv")
         return data
 
-    def run(self, process_pool=None):
-        data = self.upload_data()
-        data: pd.DataFrame = self.fuzzy_validator.validate(
-            data,
-            self.client_column,
-            self.source_column,
-            process_pool,
-        )
+    def stop_callback(self) -> None:
+        self.run_button_callback(RunButtonStatus.STOPPING)
 
-        data.to_excel(PROJECT_DIR / OUTPUT_FILENAME, index=False)
+        self.validator.stop_callback()
+
+    def call_progress(self, progress: int) -> None:
+        if self.progress_callback is not None:
+            self.progress_callback(progress)
+
+    def call_status(self, message: str) -> None:
+        if self.status_callback is not None:
+            self.status_callback(message)
+
+    def run_validator(
+        self,
+        data: pd.DataFrame,
+        process_pool,
+    ) -> pd.DataFrame:
+        try:
+            data: pd.DataFrame = self.validator.validate(
+                data,
+                self.client_column,
+                self.source_column,
+                process_pool,
+            )
+            return data
+
+        except SimFyzerGracefullExit:
+            raise SimFyzerGUIGracefullExit
+
+    def run(self):
+        try:
+            self.call_status("Загружаю данные")
+            data = self.upload_data()
+
+            self.call_status("Начинаю валидацию")
+            data = self.run_validator(data, self._process_pool)
+
+            self.call_status("Сохраняю данные")
+            data.to_excel(PROJECT_DIR / OUTPUT_FILENAME, index=False)
+
+            self.call_status("Сохранено")
+            if self.run_button_callback is not None:
+                self.run_button_callback(RunButtonStatus.STOPPED)
+
+        except SimFyzerGUIGracefullExit:
+            self.call_status("Остановлено")
+            self.call_progress(0)
+
+            if self.run_button_callback is not None:
+                self.run_button_callback(RunButtonStatus.STOPPED)
 
 
 class SimFyzerWidget(CommonGUI):
@@ -79,6 +141,11 @@ class SimFyzerWidget(CommonGUI):
         self.workfile_lay = self._setup_workfile_layout(main_layout)
         self.config_lay = self._setup_config_layout(main_layout)
         self._setup_runner(main_layout)
+        self.run_button = self._setup_run_button(main_layout)
+
+        self.status_bar = self._setup_status_bar(main_layout)
+        self.status_callback("Ожидаю запуска")
+        self.progress_bar = self._setup_progress_bar(main_layout)
 
         self.table_lay = self._setup_table_view(main_layout)
 
@@ -113,35 +180,43 @@ class SimFyzerWidget(CommonGUI):
         source_box.addWidget(source_col_label)
         source_box.addWidget(self.source_col_display)
 
-        run_button = QPushButton("Начать обработку")
-        run_button.clicked.connect(self.run)
-
         runner_layout.addLayout(params_box)
         runner_layout.addLayout(client_box)
         runner_layout.addLayout(source_box)
 
-        runner_layout.addWidget(run_button)
         main_layout.addLayout(runner_layout)
 
     def run(self):
+        self.run_button_status(RunButtonStatus.RUNNIG)
+
         config_path = self.CONFIG_PATH / self.config_combobox.currentText()
         config = self.read_config(config_path)
 
-        validator = SimFyzerProcessRunner(
+        self.validator = SimFyzerProcessRunner(
             config,
             self.file_path_display.text(),
             self.client_col_display.text(),
             self.source_col_display.text(),
             self.fuzzy_threshold_display.text(),
             self.validation_threshold_display.text(),
+            self._process_pool,
+            self.status_callback,
+            self.progress_callback,
+            self.run_button_status,
         )
 
-        validator.run(self._process_pool)
+        self.validator_stop = self.validator.stop_callback
+        self.validator.start()
+
+    def stop(self):
+        if self.validator:
+            self.validator_stop()
 
 
 if __name__ == "__main__":
-    app = QApplication(sys.argv)
-    window = SimFyzerWidget()
-    window.show()
+    with multiprocessing.Pool(4) as process_pool:
+        app = QApplication(sys.argv)
+        window = SimFyzerWidget(process_pool)
+        window.show()
 
-    sys.exit(app.exec())
+        sys.exit(app.exec())

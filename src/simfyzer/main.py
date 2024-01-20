@@ -3,6 +3,7 @@ import json
 import pandas as pd
 import numpy as np
 from pathlib import Path
+from typing import Callable
 import multiprocessing
 
 
@@ -13,7 +14,7 @@ sys.path.append(str(PROJECT_DIR))
 
 from src.notation import JAKKAR, DATA
 from src.simfyzer.preprocessing import Preprocessor
-from src.simfyzer.fuzzy_search import FuzzySearch
+from src.simfyzer.fuzzy_search import FuzzySearch, FyzzySearchGracefullExit
 from src.simfyzer.ratio import RateCounter, MarksCounter, MarksMode, RateFunction
 from src.simfyzer.tokenization import (
     BasicTokenizer,
@@ -30,6 +31,10 @@ from config.simfyzer_config.config_parser import (
 )
 
 
+class SimFyzerGracefullExit(Exception):
+    pass
+
+
 class SimFyzer(object):
     def __init__(
         self,
@@ -40,6 +45,8 @@ class SimFyzer(object):
         marks_counter: MarksCounter,
         debug: bool = False,
         validation_treshold: float = 0.5,
+        status_callback: Callable = None,
+        progress_callback: Callable = None,
     ) -> None:
         if validation_treshold < 0 or validation_treshold > 1:
             raise ValueError("Validation treshold should be in range 0 - 1")
@@ -52,30 +59,13 @@ class SimFyzer(object):
         self.debug = debug
         self.validation_treshold = validation_treshold
 
+        self.status_callback = status_callback
+        self.progress_callback = progress_callback
+
         self.symbols_to_del = r"'\"/"
 
         self._process_pool = None
-
-    def _progress_ind(self, indicator: str) -> None:
-        match indicator:
-            case "start":
-                print("Start Fuzzy Jakkar matching")
-            case "client_tokens":
-                print("Tokenize client tokens")
-            case "source_tokens":
-                print("Tokenize site tokens")
-            case "make_filter":
-                print("Make tokens filter")
-            case "make_set":
-                print("Make set of tokens")
-            case "make_fuzzy":
-                print("Start fuzzy search")
-            case "make_ratio":
-                print("Start count match ratio")
-            case "end":
-                print("End the validation process: save output")
-            case "delete_rx":
-                print("Deleting elements from rows by regex")
+        self._stopped = False
 
     def _delete_symbols(self, series: pd.Series):
         symbols_to_del = "|".join(list(self.symbols_to_del))
@@ -88,12 +78,15 @@ class SimFyzer(object):
         client_column: str,
         source_column: str,
     ) -> pd.DataFrame:
+        if self._stopped:
+            raise SimFyzerGracefullExit
+
         data[JAKKAR.CLIENT] = self._delete_symbols(data[client_column])
         data[JAKKAR.SOURCE] = self._delete_symbols(data[source_column])
         return data
 
     def _delete_working_rows(self, data: pd.DataFrame) -> pd.DataFrame:
-        self._progress_ind("end")
+        print("end validation")
         data.drop(
             [
                 JAKKAR.CLIENT,
@@ -118,10 +111,13 @@ class SimFyzer(object):
         pd.Series(data=self.ratio).to_excel(JAKKAR.RATIO_PATH)
 
     def _process_tokenization(self, data: pd.DataFrame) -> pd.DataFrame:
-        self._progress_ind("client_tokens")
+        if self._stopped:
+            raise SimFyzerGracefullExit
+
+        print("client_tokens")
         data = self.tokenizer.tokenize(data, JAKKAR.CLIENT, JAKKAR.CLIENT_TOKENS)
 
-        self._progress_ind("source_tokens")
+        print("source_tokens")
         data = self.tokenizer.tokenize(data, JAKKAR.SOURCE, JAKKAR.SOURCE_TOKENS)
 
         return data
@@ -132,6 +128,9 @@ class SimFyzer(object):
         return data
 
     def _process_preprocessing(self, validation: pd.DataFrame) -> pd.DataFrame:
+        if self._stopped:
+            raise SimFyzerGracefullExit
+
         validation[JAKKAR.CLIENT_TOKENS] = self.preproc.preprocess(
             validation[JAKKAR.CLIENT_TOKENS]
         )
@@ -144,17 +143,29 @@ class SimFyzer(object):
         self,
         data: pd.DataFrame,
     ) -> pd.DataFrame:
-        self._progress_ind("make_fuzzy")
-        data = self.fuzzy.search(
-            data,
-            JAKKAR.CLIENT_TOKENS,
-            JAKKAR.SOURCE_TOKENS,
-            self._process_pool,
-        )
-        return data
+        if self._stopped:
+            raise SimFyzerGracefullExit
+
+        print("make_fuzzy")
+
+        try:
+            data = self.fuzzy.search(
+                data,
+                JAKKAR.CLIENT_TOKENS,
+                JAKKAR.SOURCE_TOKENS,
+                self._process_pool,
+                self.call_progress,
+            )
+            return data
+
+        except FyzzySearchGracefullExit:
+            raise FyzzySearchGracefullExit
 
     def _process_ratio(self, data: pd.DataFrame) -> pd.DataFrame:
-        self._progress_ind("make_ratio")
+        if self._stopped:
+            raise SimFyzerGracefullExit
+
+        print("make_ratio")
         ratio = self.rate_counter.count_ratio(
             data,
             JAKKAR.CLIENT_TOKENS,
@@ -185,6 +196,19 @@ class SimFyzer(object):
         )
         return data
 
+    def call_status(self, message: str) -> None:
+        if self.status_callback is not None:
+            self.status_callback(message)
+
+    def call_progress(self, count: int, total: int) -> None:
+        if self.progress_callback is not None:
+            progress = int(count / total * 100)
+            self.progress_callback(progress)
+
+    def stop_callback(self) -> None:
+        self._stopped = True
+        self.fuzzy.stop_callback()
+
     def validate(
         self,
         data: pd.DataFrame,
@@ -193,23 +217,34 @@ class SimFyzer(object):
         process_pool: multiprocessing.Pool = None,
     ) -> pd.DataFrame:
         self._process_pool = process_pool
-        print(self._process_pool)
+
+        self.call_status("Создаю рабочие столбцы")
         data = self._create_working_rows(data, client_column, source_column)
 
+        self.call_status("Провожу токенизацию")
         data = self._process_tokenization(data)
+
+        self.call_status("Предобработка данных")
         data = self._process_preprocessing(data)
 
         # очистка токенов-символов по типу (, ), \, . и т.д.
         # актуально для word_tokenizer
+        self.call_status("Преобразование Левенштейна")
         data = self._process_fuzzy(data)
+
+        self.call_status("Вычисляю веса токенов")
         self.ratio = self._process_ratio(data)
+
+        self.call_status("Вычисляю оценки")
+        if self._stopped:
+            raise SimFyzerGracefullExit
 
         data = self._make_tokens_set(data)
         data = self._process_tokens_count(data)
         data = self._process_marks_count(data)
 
-        if self.debug:
-            self._save_ratio()
+        # if self.debug:
+        #     self._save_ratio()
 
         data[JAKKAR.VALIDATED] = np.where(
             data[self.marks_counter.validation_column] >= self.validation_treshold,
@@ -217,6 +252,7 @@ class SimFyzer(object):
             0,
         )
 
+        self.call_status("Закончил валидацию")
         data = self._delete_working_rows(data)
         return data
 
@@ -225,6 +261,8 @@ def setup_SimFyzer(
     config: dict,
     fuzzy_threshold: float,
     validation_threshold: float,
+    status_callback: Callable = None,
+    progress_callback: Callable = None,
 ) -> SimFyzer:
     regex_weights = RegexCustomWeights(
         config[CONFIG.REGEX_WEIGHTS][REGEX_WEIGHTS.CAPS],
@@ -260,6 +298,8 @@ def setup_SimFyzer(
         rate_counter=rate_counter,
         marks_counter=marks_counter,
         validation_treshold=validation_threshold,
+        status_callback=status_callback,
+        progress_callback=progress_callback,
     )
     return simfyzer
 

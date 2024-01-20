@@ -126,6 +126,7 @@ class FeatureList(object):
         feature_list: list[AbstractFeature] = [],
     ) -> None:
         self.feature_list = self.sort_futures(feature_list)
+        self.lenght = len(feature_list)
 
     def sort_futures(
         self, feature_list: list[AbstractFeature]
@@ -134,6 +135,9 @@ class FeatureList(object):
         features = sorted(features, key=lambda feature: feature[1])
         features = list(map(lambda feature: feature[0], features))
         return features
+
+    def __len__(self) -> int:
+        return self.lenght
 
     def __iter__(self):
         self._index = 0

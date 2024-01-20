@@ -1,6 +1,7 @@
 import sys
 import multiprocessing
 import pandas as pd
+from typing import Callable
 from pathlib import Path
 from tqdm import tqdm
 from functools import partial
@@ -12,6 +13,10 @@ PROJECT_DIR = Path(__file__).parent.parent.parent
 sys.path.append(str(PROJECT_DIR))
 
 from src.simfyzer.tokenization import Token, TokenTransformer
+
+
+class FyzzySearchGracefullExit(Exception):
+    pass
 
 
 def searching_func(
@@ -56,6 +61,16 @@ class FuzzySearch(object):
         self.transformer = transformer
 
         self._process_pool = None
+        self._stopped = False
+
+        self.progress_callback = None
+
+    def stop_callback(self) -> None:
+        self._stopped = True
+
+    def call_progress(self, count: int, total: int) -> None:
+        if self.progress_callback is not None:
+            self.progress_callback(count, total)
 
     def search(
         self,
@@ -63,7 +78,9 @@ class FuzzySearch(object):
         left_tokens_column: str,
         right_tokens_column: str,
         process_pool: multiprocessing.Pool = None,
+        progress_callback: Callable = None,
     ) -> pd.DataFrame:
+        self.progress_callback = progress_callback
         self._process_pool = process_pool
 
         left_tokens = data[left_tokens_column].to_list()
@@ -76,12 +93,27 @@ class FuzzySearch(object):
             fuzzy_threshold=self.fuzzy_threshold,
         )
 
-        if self._process_pool != None:
-            massive = self._process_pool.map(search_func, tqdm(massive))
-        else:
-            massive = list(map(search_func, tqdm(massive)))
+        chunk_size = 500
+        chunks = [
+            massive[i : i + chunk_size] for i in range(0, len(massive), chunk_size)
+        ]
 
-        data[left_tokens_column] = list(map(lambda x: x[0], massive))
-        data[right_tokens_column] = list(map(lambda x: x[1], massive))
+        count = 0
+        total = len(chunks)
+
+        results = []
+        self.progress_callback(count, total)
+        for chunk in chunks:
+            if self._process_pool != None:
+                chunk = self._process_pool.map(search_func, chunk)
+            else:
+                chunk = list(map(search_func, chunk))
+            results.extend(chunk)
+
+            count += 1
+            self.progress_callback(count, total)
+
+        data[left_tokens_column] = list(map(lambda x: x[0], results))
+        data[right_tokens_column] = list(map(lambda x: x[1], results))
 
         return data

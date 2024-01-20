@@ -43,6 +43,12 @@ sys.path.append(str(GUI_DIR))
 from config.measures_config.config_parser import CONFIG, MEASURE, DATA, UNIT
 
 
+class RunButtonStatus(object):
+    RUNNIG = "Остановить"
+    STOPPED = "Начать обработку"
+    STOPPING = "Останавливаю обработку"
+
+
 class TreeItem(object):
     def __init__(self, parent: "TreeItem" = None):
         self._parent = parent
@@ -382,10 +388,31 @@ class CommonGUI(QWidget):
         progress_layout.addWidget(self.progress_bar)
         main_layout.addLayout(progress_layout)
 
+        self.progress_signal.connect(self.progress_bar.setValue)
         return self.progress_bar
 
     def progress_callback(self, progress: int) -> None:
         self.progress_signal.emit(progress)
+
+    def run_button_status(self, status: RunButtonStatus) -> None:
+        self.run_button.setText(status)
+
+    def run_button_handler(self):
+        if self.run_button.text() == RunButtonStatus.STOPPED:
+            self.run()
+        elif self.run_button.text() == RunButtonStatus.RUNNIG:
+            self.stop()
+        elif self.run_button.text() == RunButtonStatus.STOPPING:
+            pass
+
+    def _setup_run_button(self, main_layout: QVBoxLayout) -> None:
+        runner_layout = QHBoxLayout()
+        self.run_button = QPushButton(RunButtonStatus.STOPPED)
+        self.run_button.clicked.connect(self.run_button_handler)
+        runner_layout.addWidget(self.run_button)
+
+        main_layout.addLayout(runner_layout)
+        return self.run_button
 
     def _setup_status_bar(self, main_layout: QVBoxLayout) -> QStatusBar:
         status_layout = QHBoxLayout()

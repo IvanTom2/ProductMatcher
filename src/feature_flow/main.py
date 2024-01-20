@@ -6,7 +6,7 @@ import regex as re
 import pandas as pd
 
 from abc import ABC, abstractmethod
-from typing import Union, Set
+from typing import Union, Set, Callable
 from pathlib import Path
 from tqdm import tqdm
 from functools import partial
@@ -29,6 +29,10 @@ from src.feature_flow.feature_functool import (
 )
 
 warnings.filterwarnings("ignore")
+
+
+class FeatureFlowGracefullExit(Exception):
+    pass
 
 
 class AbstractFeatureFlow(ABC):
@@ -64,6 +68,8 @@ class FeatureFlow(AbstractFeatureFlow):
         source_column: str,
         features_list: list[AbstractFeature],
         skip_intermediate_validated: bool = True,
+        status_callback: Callable = None,
+        progress_callback: Callable = None,
     ) -> None:
         self.CLIENT_NAME = client_column
         self.SOURCE_NAME = source_column
@@ -71,7 +77,11 @@ class FeatureFlow(AbstractFeatureFlow):
         self.skip_intermediate_validated = skip_intermediate_validated
         self.features = FeatureList(features_list)
 
+        self.status_callback = status_callback
+        self.progress_callback = progress_callback
+
         self._process_pool = None
+        self._stopped = False
 
     def _data_preprocess(self, data: pd.DataFrame) -> pd.DataFrame:
         data[FEATURES.VALIDATED] = 1
@@ -212,6 +222,16 @@ class FeatureFlow(AbstractFeatureFlow):
             container[index] += new_features[index]
         return container
 
+    def call_progress(self, count: int, total: int) -> None:
+        if self.progress_callback is not None:
+            if total > 0:
+                progress = int(count / total * 100)
+                self.progress_callback(progress)
+
+    def call_status(self, message: str) -> None:
+        if self.status_callback is not None:
+            self.status_callback(message)
+
     def _extract(self, data: pd.DataFrame) -> pd.DataFrame:
         client = data[FEATURES.CLIENT_NAME].to_list()  # data client
         source = data[FEATURES.SOURCE_NAME].to_list()  # data source
@@ -219,8 +239,16 @@ class FeatureFlow(AbstractFeatureFlow):
         cfeatures = [[] for _ in range(len(data))]  # client features
         sfeatures = [[] for _ in range(len(data))]  # source features
 
+        count = 0
+        total = len(self.features)
+
+        self.call_progress(count, total)
         for feature in self.features:
+            if self._stopped:
+                raise FeatureFlowGracefullExit
+
             feature: AbstractFeature
+            self.call_status(f"Извлекаю {feature.NAME}")
 
             CI = [[] for _ in range(len(data))]
             SI = [[] for _ in range(len(data))]
@@ -243,10 +271,17 @@ class FeatureFlow(AbstractFeatureFlow):
 
             data = self._intermediate_validation(data, feature, CI, SI)
 
+            count += 1
+            self.call_progress(count, total)
+
         data[FEATURES.CLIENT] = cfeatures
         data[FEATURES.SOURCE] = sfeatures
 
+        self.call_status("Закончил валидацию по величинам")
         return data
+
+    def stop_callback(self) -> None:
+        self._stopped = True
 
     def validate(
         self,
@@ -255,9 +290,13 @@ class FeatureFlow(AbstractFeatureFlow):
     ) -> pd.DataFrame:
         self._process_pool = process_pool  # setup process pool
 
+        self.call_status("Начинаю предобработку данных")
         data = self._data_preprocess(data)
 
+        self.call_status("Начинаю валидацию по величинам")
         data = self._extract(data)
+
+        self.call_status("Начинаю чистку данных")
         data = self._data_clean(data)
 
         return data
