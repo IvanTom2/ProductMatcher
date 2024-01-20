@@ -1,21 +1,29 @@
+import sys
 import pandas as pd
 import re
 import copy
+
 from tqdm import tqdm
 from pathlib import Path
+from typing import Callable
 
 SRC_DIR = Path(__file__).parent.parent
 PROJECT_DIR = SRC_DIR.parent
+sys.path.append(str(PROJECT_DIR))
 
-from common import del_rx, LanguageRules
-from common import BasicCrosser
-from functool.word_extraction import (
+from src.semantix.common import del_rx, LanguageRules
+from src.semantix.common import BasicCrosser
+from src.functool.word_extraction import (
     words_cleaner,
     words_filter,
     words_join,
     words_stemming,
     WordsExtractor,
 )
+
+
+class CrosserGracefullExit(Exception):
+    pass
 
 
 class Crosser(BasicCrosser):
@@ -206,6 +214,8 @@ class CrosserPro(Crosser):
         make_cross_intersect: bool = True,
         delete_rx: bool = True,
         process_nearest: int = 0,
+        status_callback: Callable = None,
+        progress_callback: Callable = None,
     ):
         BasicCrosser.__init__(self)
 
@@ -214,6 +224,11 @@ class CrosserPro(Crosser):
         self.make_cross_intersect = make_cross_intersect
         self.delete_rx = delete_rx
         self.process_nearest = process_nearest
+
+        self.status_callback = status_callback
+        self.progress_callback = progress_callback
+
+        self._stopped = False
 
         self.extractors = [WordsExtractor(rule) for rule in self.rules]
 
@@ -227,10 +242,24 @@ class CrosserPro(Crosser):
     def _show_status(self):
         print("Извелечение слов по кросс-семантике")
 
+    def call_status(self, message: str) -> None:
+        if self.status_callback is not None:
+            self.status_callback(message)
+
+    def call_progress(self, count: int, total: int) -> None:
+        if self.progress_callback is not None:
+            if total > 0:
+                progress = int(count / total * 100)
+                self.progress_callback(progress)
+
+    def stop_callback(self) -> None:
+        self._stopped = True
+
     def extract(self, data: pd.DataFrame, col: str):
         resort_by_index = False
-        self._show_status()
+        # self._show_status()
 
+        self.call_status("Предобработка для кросс-семантики")
         data = self._setup(data)
         data = self._del_rx(data, col)
         data = self.get_tokens_pro(data, "row", self.extractors)
@@ -240,7 +269,16 @@ class CrosserPro(Crosser):
             data = data.sort_values(by=[col])
 
         indexes = list(data.index)
-        for pos_index in tqdm(range(len(indexes))):
+
+        count = 0
+        total = len(indexes)
+
+        self.call_status("Извлекаю кросс-семантику")
+        self.call_progress(count, total)
+        for pos_index in range(len(indexes)):
+            if self._stopped:
+                raise CrosserGracefullExit
+
             index = indexes[pos_index]
             current_set = data.at[index, "tokens"]
 
@@ -266,6 +304,9 @@ class CrosserPro(Crosser):
                     self._call_cross_intersect(
                         data, col, current_set, other_set, index, rest_index
                     )
+
+            count += 1
+            self.call_progress(count, total)
 
         data = self._to_list(data)
         data = self._join(data)

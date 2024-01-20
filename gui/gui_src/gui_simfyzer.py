@@ -13,15 +13,20 @@ from PyQt6.QtWidgets import (
 GUI_DIR = Path(__file__).parent.parent
 GUI_SRC = GUI_DIR / "gui_src"
 PROJECT_DIR = GUI_DIR.parent
-CONFIG_PATH = PROJECT_DIR / "config" / "fuzzy_config" / "setups"
+CONFIG_PATH = PROJECT_DIR / "config" / "simfyzer_config" / "setups"
 
 sys.path.append(str(PROJECT_DIR))
 
 from gui_common import CommonGUI
-from src.fuzzy_v.jakkar import FuzzyJakkarValidator, setup_jakkar_validator
+from src.simfyzer.main import SimFyzer, setup_SimFyzer
 
 
-class FuzzyValidatorProcessRunner(object):
+SIMFYZER_CLIENT_COL = "Название товара"
+SIMFYZER_SOURCE_COL = "Сырые данные"
+OUTPUT_FILENAME = "SimFyzer_output.xlsx"
+
+
+class SimFyzerProcessRunner(object):
     def __init__(
         self,
         config: str | Path,
@@ -35,7 +40,7 @@ class FuzzyValidatorProcessRunner(object):
         self.source_column = source_column
 
         self.data_path = data_path
-        self.fuzzy_validator = setup_jakkar_validator(
+        self.fuzzy_validator = setup_SimFyzer(
             config,
             float(fuzzy_threshold),
             float(validation_threshold),
@@ -50,22 +55,24 @@ class FuzzyValidatorProcessRunner(object):
             raise ValueError("File should be Excel or csv")
         return data
 
-    def run(self):
+    def run(self, process_pool=None):
         data = self.upload_data()
         data: pd.DataFrame = self.fuzzy_validator.validate(
             data,
             self.client_column,
             self.source_column,
+            process_pool,
         )
 
-        data.to_excel(PROJECT_DIR / "fuzzy_v_output.xlsx", index=False)
+        data.to_excel(PROJECT_DIR / OUTPUT_FILENAME, index=False)
 
 
-class FuzzyValidatorWidget(CommonGUI):
+class SimFyzerWidget(CommonGUI):
     CONFIG_PATH = CONFIG_PATH
 
-    def __init__(self):
+    def __init__(self, process_pool=None):
         super().__init__()
+        self._process_pool = process_pool
 
         main_layout = QVBoxLayout(self)
 
@@ -96,13 +103,13 @@ class FuzzyValidatorWidget(CommonGUI):
 
         client_box = QHBoxLayout()
         client_col_label = QLabel("Столбец названий клиента")
-        self.client_col_display = QLineEdit("Название товара клиента")
+        self.client_col_display = QLineEdit(SIMFYZER_CLIENT_COL)
         client_box.addWidget(client_col_label)
         client_box.addWidget(self.client_col_display)
 
         source_box = QHBoxLayout()
         source_col_label = QLabel("Столбец названий источника")
-        self.source_col_display = QLineEdit("Строка валидации")
+        self.source_col_display = QLineEdit(SIMFYZER_SOURCE_COL)
         source_box.addWidget(source_col_label)
         source_box.addWidget(self.source_col_display)
 
@@ -120,7 +127,7 @@ class FuzzyValidatorWidget(CommonGUI):
         config_path = self.CONFIG_PATH / self.config_combobox.currentText()
         config = self.read_config(config_path)
 
-        validator = FuzzyValidatorProcessRunner(
+        validator = SimFyzerProcessRunner(
             config,
             self.file_path_display.text(),
             self.client_col_display.text(),
@@ -129,12 +136,12 @@ class FuzzyValidatorWidget(CommonGUI):
             self.validation_threshold_display.text(),
         )
 
-        validator.run()
+        validator.run(self._process_pool)
 
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    window = FuzzyValidatorWidget()
+    window = SimFyzerWidget()
     window.show()
 
     sys.exit(app.exec())

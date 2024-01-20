@@ -22,7 +22,7 @@ from src.simfyzer.tokenization import (
     RegexCustomWeights,
     LanguageType,
 )
-from config.fuzzy_config.config_parser import (
+from config.simfyzer_config.config_parser import (
     CONFIG,
     REGEX_WEIGHTS,
     LANGUAGE_WEIGHTS,
@@ -193,6 +193,7 @@ class SimFyzer(object):
         process_pool: multiprocessing.Pool = None,
     ) -> pd.DataFrame:
         self._process_pool = process_pool
+        print(self._process_pool)
         data = self._create_working_rows(data, client_column, source_column)
 
         data = self._process_tokenization(data)
@@ -220,7 +221,7 @@ class SimFyzer(object):
         return data
 
 
-def setup_SymFyzer(
+def setup_SimFyzer(
     config: dict,
     fuzzy_threshold: float,
     validation_threshold: float,
@@ -273,10 +274,10 @@ if __name__ == "__main__":
     data = pd.read_excel("/home/mainus/Projects/ProductMatcher/FarmaImpex2.xlsx")
 
     config = read_config(
-        "/home/mainus/Projects/ProductMatcher/config/fuzzy_config/setups/main.json"
+        "/home/mainus/Projects/ProductMatcher/config/simfyzer_config/setups/main.json"
     )
 
-    validator = setup_SymFyzer(config, 0.75, 0.5)
+    validator = setup_SimFyzer(config, 0.75, 0.5)
     process_pool = multiprocessing.Pool(4)
 
     data: pd.DataFrame = validator.validate(

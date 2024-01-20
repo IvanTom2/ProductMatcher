@@ -18,10 +18,14 @@ CONFIG_PATH = PROJECT_DIR / "config" / "measures_config" / "setups"
 sys.path.append(str(PROJECT_DIR))
 
 from gui_common import CommonGUI
-from src.feature_v.feature_validator import FeatureGenerator, TextFeatureValidator
+from src.feature_flow.main import FeatureGenerator, FeatureFlow
+
+OUTPUT_FILENAME = "FeatureFlow_output.xlsx"
+FEATURE_FLOW_CLIENT_COL = "Название товара"
+FEATURE_FLOW_SOURCE_COL = "Сырые данные"
 
 
-class FeatureValidatorProcessRunner(object):
+class FeatureFlowProcessRunner(object):
     def __init__(
         self,
         config: dict,
@@ -34,7 +38,7 @@ class FeatureValidatorProcessRunner(object):
         self.feature_generator = FeatureGenerator()
         features = self.feature_generator.generate(config)
 
-        self.validator = TextFeatureValidator(
+        self.validator = FeatureFlow(
             client_column,
             source_column,
             features,
@@ -49,17 +53,18 @@ class FeatureValidatorProcessRunner(object):
             raise ValueError("File should be Excel or csv")
         return data
 
-    def run(self) -> None:
+    def run(self, process_pool=None) -> None:
         data = self.upload_data()
-        data = self.validator.validate(data)
-        data.to_excel(PROJECT_DIR / "feature_v_output.xlsx", index=False)
+        data = self.validator.validate(data, process_pool)
+        data.to_excel(PROJECT_DIR / OUTPUT_FILENAME, index=False)
 
 
-class FeatureValidatorWidget(CommonGUI):
+class FeatureFlowWidget(CommonGUI):
     CONFIG_PATH = CONFIG_PATH
 
-    def __init__(self):
+    def __init__(self, process_pool=None):
         super().__init__()
+        self._process_pool = process_pool
 
         main_layout = QVBoxLayout(self)
 
@@ -74,13 +79,13 @@ class FeatureValidatorWidget(CommonGUI):
 
         client_box = QHBoxLayout()
         client_col_label = QLabel("Столбец названий клиента")
-        self.client_col_display = QLineEdit("Название товара клиента")
+        self.client_col_display = QLineEdit(FEATURE_FLOW_CLIENT_COL)
         client_box.addWidget(client_col_label)
         client_box.addWidget(self.client_col_display)
 
         source_box = QHBoxLayout()
         source_col_label = QLabel("Столбец названий источника")
-        self.source_col_display = QLineEdit("Строка валидации")
+        self.source_col_display = QLineEdit(FEATURE_FLOW_SOURCE_COL)
         source_box.addWidget(source_col_label)
         source_box.addWidget(self.source_col_display)
 
@@ -97,19 +102,19 @@ class FeatureValidatorWidget(CommonGUI):
         config_path = self.CONFIG_PATH / self.config_combobox.currentText()
         config = self.read_config(config_path)
 
-        validator = FeatureValidatorProcessRunner(
+        validator = FeatureFlowProcessRunner(
             config,
             self.file_path_display.text(),
             self.client_col_display.text(),
             self.source_col_display.text(),
         )
 
-        validator.run()
+        validator.run(self._process_pool)
 
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    window = FeatureValidatorWidget()
+    window = FeatureFlowWidget()
     window.show()
 
     sys.exit(app.exec())

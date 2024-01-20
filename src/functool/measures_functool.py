@@ -5,6 +5,7 @@ import regex as re
 import pandas as pd
 
 from pathlib import Path
+from typing import Callable
 from decimal import Decimal
 from abc import abstractmethod
 from typing import Tuple, List
@@ -25,6 +26,10 @@ from config.measures_config.config_parser import (
 EXCLUDE_RX_NAME_PREFIX = "Исключ. "
 EXCLUDE_RX_PATTER = r"(?!.*("
 EXCLUDE_RX_PATTER_CARET = r"^(?!.*("
+
+
+class MeasuresGracefullExit(Exception):
+    pass
 
 
 class SearchMode(object):
@@ -518,11 +523,21 @@ class Measures(object):
 
     """
 
-    def __init__(self, config: dict) -> None:
+    def __init__(
+        self,
+        config: dict,
+        status_callback: Callable = None,
+        progress_callback: Callable = None,
+    ) -> None:
         self.measures = self._create_measures(config)
         self.measures_names = list(self.measures.keys())
 
+        self.status_callback = status_callback
+        self.progress_callback = progress_callback
+
         self.used_units_names = []
+
+        self._stopped = False
 
     def __iter__(self):
         self.__iterbale = list(self.measures.keys())
@@ -581,6 +596,22 @@ class Measures(object):
 
         return measures_list
 
+    def stop_callback(self) -> None:
+        self._stopped = True
+
+    def _status(self, measure_name: str) -> str:
+        return f"Извлекаю {measure_name}"
+
+    def call_status(self, message: str) -> None:
+        if self.status_callback is not None:
+            self.status_callback(message)
+
+    def call_progress(self, count: int, total: int) -> None:
+        if self.progress_callback is not None:
+            if total > 0:
+                progress = int(count / total * 100)
+                self.progress_callback(progress)
+
     def extract_measure(
         self,
         data: pd.DataFrame,
@@ -606,12 +637,26 @@ class Measures(object):
     ) -> pd.DataFrame:
         """Extract regex for all measures"""
 
+        count = 0
+        total = len(self.measures_names)
+
+        self.call_status("Начинаю извлечение величин")
+        self.call_progress(count, total)
         for measure_name in self.measures_names:
+            if self._stopped:
+                raise MeasuresGracefullExit("Measures extraction was stopped")
+
+            self.call_status(self._status(measure_name))
+
             measure = self.measures[measure_name]
             data, units_names = measure.extract(data, column)
 
             self.used_units_names.extend(units_names)
 
+            count += 1
+            self.call_progress(count, total)
+
+        self.call_status("Закончил извлечение")
         return data
 
     def _concat_exlcude_rx(
@@ -708,10 +753,10 @@ def fast_test():
 
 if __name__ == "__main__":
     data = pd.DataFrame()
-    data.at[0, "name"] = "Мандарин 10шт"
-    data.at[1, "name"] = "Мандарин 11шт"
-    data.at[2, "name"] = "Мандарин 12шт"
-    data.at[3, "name"] = "Мандарин 1шт"
+    data.at[0, "name"] = "Мандарин 10шт "
+    data.at[1, "name"] = "Мандарин 11шт "
+    data.at[2, "name"] = "Мандарин 12шт "
+    data.at[3, "name"] = "Мандарин 1шт "
 
     config = read_config(
         "/home/mainus/Projects/ProductMatcher/config/measures_config/setups/main.json"
@@ -722,4 +767,4 @@ if __name__ == "__main__":
     data = measures.concat_regex(data, True)
 
     print(data)
-    print(data.at[0, "regex"])
+    print(data.at[0, "Regex"])

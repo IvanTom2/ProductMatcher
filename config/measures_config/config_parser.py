@@ -35,8 +35,8 @@ class MEASURE(object):
     NAME = "measure_name"
     DATA = "measure_data"
 
-    AUTOSEM = "autosem"
-    TEXT_FEATURES = "feature_validator"
+    AUTOSEM = "SemantiX"
+    TEXT_FEATURES = "FeatureFlow"
 
     AUTOSEM_CONF = AUTOSEM_CONF
     TEXT_FEATURES_CONF = TEXT_FEATURES_CONF

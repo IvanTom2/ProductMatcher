@@ -12,7 +12,7 @@ import cProfile
 PROJECT_DIR = Path(__file__).parent.parent.parent
 sys.path.append(str(PROJECT_DIR))
 
-from src.simfyzer.main import setup_SymFyzer, SimFyzer
+from src.simfyzer.main import setup_SimFyzer, SimFyzer
 from src.notation import JAKKAR
 from src.tests.common_test import (
     FUZZY_CONFIG,
@@ -36,7 +36,7 @@ class BaseTestFuzzyV(object):
         fuzzy_threshold: float = 0.75,
         validation_threshold: float = 0.5,
     ) -> SimFyzer:
-        validator = setup_SymFyzer(
+        validator = setup_SimFyzer(
             config=config,
             fuzzy_threshold=fuzzy_threshold,
             validation_threshold=validation_threshold,

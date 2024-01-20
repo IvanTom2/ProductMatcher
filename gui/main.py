@@ -1,6 +1,7 @@
 import os
 import sys
 import json
+import multiprocessing
 from pathlib import Path
 from PyQt6.QtWidgets import (
     QTreeView,
@@ -24,16 +25,19 @@ PROJECT_DIR = GUI_DIR.parent
 sys.path.append(str(PROJECT_DIR))
 sys.path.append(str(GUI_SRC))
 
-from gui_src.gui_autosem import AutosemWidget, AUTOSEM_CONFIG_PATH
-from gui.gui_src.gui_feature_v import FeatureValidatorWidget
-from gui.gui_src.gui_fuzzy_v import FuzzyValidatorWidget
+from gui.gui_src.gui_semantix import SemantixWidget
+from gui.gui_src.gui_feature_flow import FeatureFlowWidget
+from gui.gui_src.gui_simfyzer import SimFyzerWidget
 
 
 class MainWindow(QMainWindow):
-    def __init__(self) -> None:
+    def __init__(self, process_pool=None) -> None:
         super().__init__()
 
+        self._process_pool = process_pool
+
         main_window = QWidget(self)
+        self.setWindowTitle("Skylark")
         self.setCentralWidget(main_window)
 
         tab_widget = self._set_tables(main_window)
@@ -46,13 +50,13 @@ class MainWindow(QMainWindow):
     def _set_tables(self, main_window: QWidget):
         tab_widget = QTabWidget(main_window)
 
-        autosem_tab = AutosemWidget(AUTOSEM_CONFIG_PATH)
-        feature_validator_tab = FeatureValidatorWidget()
-        jakkar_validator_tab = FuzzyValidatorWidget()
+        autosem_tab = SemantixWidget()
+        feature_validator_tab = FeatureFlowWidget(self._process_pool)
+        jakkar_validator_tab = SimFyzerWidget(self._process_pool)
 
-        tab_widget.addTab(autosem_tab, "Auto-Semantic")
-        tab_widget.addTab(feature_validator_tab, "Feature-Validator")
-        tab_widget.addTab(jakkar_validator_tab, "Fuzzy-Validator")
+        tab_widget.addTab(autosem_tab, "Semantix")
+        tab_widget.addTab(feature_validator_tab, "FeatureFlow")
+        tab_widget.addTab(jakkar_validator_tab, "SimFyzer")
 
         return tab_widget
 
@@ -70,7 +74,8 @@ class MainWindow(QMainWindow):
 
 
 if __name__ == "__main__":
-    app = QApplication(sys.argv)
-    window = MainWindow()
-    window.show()
-    sys.exit(app.exec())
+    with multiprocessing.Pool() as process_pool:
+        app = QApplication(sys.argv)
+        window = MainWindow(process_pool)
+        window.show()
+        sys.exit(app.exec())

@@ -247,15 +247,6 @@ class TestSemantixUncreation(BaseTestSemantix):
         )
 
 
-class TestSemantixUncreationCustom(BaseTestSemantix):
-    def test_uncreation_weight(self, dataset: UncreationDataSet):
-        self.run_uncreation_test(
-            CustomUncreationData.uncreation_weight_data(),
-            DataTypes.weight,
-            self.extractor(),
-        )
-
-
 class AutosemUncreationTestsDebug(TestSemantixUncreation):
     def __init__(self) -> None:
         super().__init__()

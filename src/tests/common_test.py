@@ -49,7 +49,7 @@ def get_measures_config() -> dict:
 
 
 def get_fuzzy_config() -> dict:
-    FUZZY_CONFIG_PATH = CONFIG_DIR / "fuzzy_config" / "setups" / "main.json"
+    FUZZY_CONFIG_PATH = CONFIG_DIR / "simfyzer_config" / "setups" / "main.json"
     with open(FUZZY_CONFIG_PATH, "rb") as file:
         conf = json.loads(file.read())
     return conf

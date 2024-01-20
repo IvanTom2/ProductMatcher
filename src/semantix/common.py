@@ -11,7 +11,12 @@ PROJECT_DIR = SRC_DIR.parent
 sys.path.append(str(PROJECT_DIR))
 
 from src.functool.interfaces import Extractor
-from src.functool.measures_functool import SearchMode, MergeMode, Measures
+from src.functool.measures_functool import (
+    SearchMode,
+    MergeMode,
+    Measures,
+    MeasuresGracefullExit,
+)
 from src.functool.cross_semantic_functool import BasicCrosser
 from src.functool.words_functool import (
     LanguageRules,
@@ -29,7 +34,7 @@ def read_config(path: str | Path) -> dict:
 
 def parse_rx(
     data: pd.DataFrame,
-    extract_col: str = "regex",
+    extract_col: str = "Regex",
     new_col_name: str = "rx_to_del",
 ) -> pd.DataFrame:
     data[new_col_name] = data[extract_col].str.findall(r"\(\?\=\.\*.*?\)\)+")

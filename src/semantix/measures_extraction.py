@@ -6,12 +6,13 @@ import pandas as pd
 import numpy as np
 
 from pathlib import Path
+from typing import Callable
 
 SRC_DIR = Path(__file__).parent.parent
 PROJECT_DIR = SRC_DIR.parent
 sys.path.append(str(PROJECT_DIR))
 
-from src.semantix.common import Extractor, Measures, read_config
+from src.semantix.common import Extractor, Measures, read_config, MeasuresGracefullExit
 
 
 class MeasureExtractor(Extractor):
@@ -19,9 +20,16 @@ class MeasureExtractor(Extractor):
         self,
         config: dict,
         add_spaces: bool = True,
+        status_callback: Callable = None,
+        progress_callback: Callable = None,
     ) -> None:
         self._add_spaces_flag = add_spaces
-        self.enginge = Measures(config)
+        self.enginge = Measures(config, status_callback, progress_callback)
+
+        self.status_callback = status_callback
+        self.progress_callback = progress_callback
+
+        self._stopped = False
 
     def _add_spaces(self, series: pd.Series) -> pd.Series:
         return "  " + series + "  " if self._add_spaces_flag else series
@@ -35,6 +43,10 @@ class MeasureExtractor(Extractor):
         with open(config_path, "rb") as file:
             rules = file.read()
         return json.loads(rules)
+
+    def stop_callback(self) -> None:
+        self._stopped = True
+        self.enginge.stop_callback()
 
     def extract(
         self,
@@ -55,8 +67,19 @@ class MeasuresExtractor(MeasureExtractor):
         self,
         config: dict,
         add_spaces: bool = True,
+        status_callback: Callable = None,
+        progress_callback: Callable = None,
     ) -> None:
-        super().__init__(config, add_spaces)
+        super().__init__(
+            config,
+            add_spaces,
+            status_callback,
+            progress_callback,
+        )
+
+    def call_status(self, message: str) -> None:
+        if self.status_callback is not None:
+            self.status_callback(message)
 
     def extract(
         self,
@@ -68,6 +91,8 @@ class MeasuresExtractor(MeasureExtractor):
         data[column] = self._add_spaces(data[column])
 
         data = self.enginge.extract_all(data, column)
+
+        self.call_status("Объединяю регулярные выражения")
         data = (
             self.enginge.concat_regex(data, delete_features_columns)
             if concat_regex

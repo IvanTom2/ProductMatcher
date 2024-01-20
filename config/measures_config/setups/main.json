@@ -5,12 +5,12 @@
     "measures": [
       {
         "measure_name": "Объем",
-        "autosem": {
+        "SemantiX": {
           "merge_mode": "1",
           "exclude_rx": false,
           "use_it": true
         },
-        "feature_validator": {
+        "FeatureFlow": {
           "use_it": true,
           "validation_mode": "strict",
           "not_found_mode": "strict",
@@ -47,12 +47,12 @@
       },
       {
         "measure_name": "Вес",
-        "autosem": {
+        "SemantiX": {
           "merge_mode": "1",
           "exclude_rx": false,
           "use_it": true
         },
-        "feature_validator": {
+        "FeatureFlow": {
           "use_it": true,
           "validation_mode": "strict",
           "not_found_mode": "strict",
@@ -60,7 +60,7 @@
         },
         "measure_data": {
           "common_prefix": "[^0-9]",
-          "common_postfix": "[^\\\\/]",
+          "common_postfix": "[^\\\\\\/]",
           "common_max_count": 1,
           "special_value_search": null,
           "units": [
@@ -69,7 +69,7 @@
               "symbol": "мкг|микрограмм|µg|ug|microgram",
               "relative_weight": 1,
               "prefix": "common",
-              "postfix": "[^\\\\/a-z]",
+              "postfix": "[^\\\\\\/a-z]",
               "max_count": 1,
               "search_mode": "behind",
               "use_it": true
@@ -89,7 +89,7 @@
               "symbol": "г|гр|г[.]|грамм|g|gr|gram",
               "relative_weight": 1000000,
               "prefix": "common",
-              "postfix": "[^\\\\/a-zа-я]",
+              "postfix": "[^\\\\\\/a-zа-я]",
               "max_count": 1,
               "search_mode": "behind",
               "use_it": true
@@ -109,12 +109,12 @@
       },
       {
         "measure_name": "Количество",
-        "autosem": {
+        "SemantiX": {
           "merge_mode": "1",
           "exclude_rx": true,
           "use_it": true
         },
-        "feature_validator": {
+        "FeatureFlow": {
           "use_it": true,
           "validation_mode": "strict",
           "not_found_mode": "strict",
@@ -151,12 +151,12 @@
       },
       {
         "measure_name": "Объем памяти",
-        "autosem": {
+        "SemantiX": {
           "merge_mode": "1",
           "exclude_rx": false,
           "use_it": true
         },
-        "feature_validator": {
+        "FeatureFlow": {
           "use_it": true,
           "validation_mode": "strict",
           "not_found_mode": "strict",
@@ -213,12 +213,12 @@
       },
       {
         "measure_name": "Концентрация на дозу",
-        "autosem": {
+        "SemantiX": {
           "merge_mode": "1",
           "exclude_rx": false,
           "use_it": true
         },
-        "feature_validator": {
+        "FeatureFlow": {
           "use_it": true,
           "validation_mode": "strict",
           "not_found_mode": "strict",
@@ -265,12 +265,12 @@
       },
       {
         "measure_name": "Длина",
-        "autosem": {
+        "SemantiX": {
           "merge_mode": "1",
           "exclude_rx": false,
           "use_it": true
         },
-        "feature_validator": {
+        "FeatureFlow": {
           "use_it": true,
           "validation_mode": "strict",
           "not_found_mode": "strict",
@@ -332,19 +332,19 @@
     "measures": [
       {
         "measure_name": "Цвет",
-        "autosem": {
+        "SemantiX": {
           "use_it": true,
           "exclude_rx": false,
           "merge_mode": "none"
         },
-        "feature_validator": {
+        "FeatureFlow": {
           "use_it": true,
           "validation_mode": "strict",
           "not_found_mode": "strict",
           "priority": 10
         },
         "measure_data": {
-          "common_prefix": "",
+          "common_prefix": "\\s",
           "common_postfix": "",
           "common_max_count": 1,
           "special_value_search": null,
@@ -424,19 +424,19 @@
       },
       {
         "measure_name": "Лекарственная Форма",
-        "autosem": {
+        "SemantiX": {
           "use_it": false,
           "exclude_rx": false,
           "merge_mode": "none"
         },
-        "feature_validator": {
+        "FeatureFlow": {
           "use_it": false,
           "validation_mode": "strict",
           "not_found_mode": "strict",
           "priority": 10
         },
         "measure_data": {
-          "common_prefix": "",
+          "common_prefix": "\\s",
           "common_postfix": "",
           "common_max_count": 1,
           "special_value_search": null,
@@ -631,7 +631,7 @@
     "measures": [
       {
         "measure_name": "Complex Dimension",
-        "feature_validator": {
+        "FeatureFlow": {
           "use_it": true,
           "validation_mode": "strict",
           "not_found_mode": "strict",
@@ -640,7 +640,7 @@
       },
       {
         "measure_name": "Complex Concentration",
-        "feature_validator": {
+        "FeatureFlow": {
           "use_it": true,
           "validation_mode": "strict",
           "not_found_mode": "strict",

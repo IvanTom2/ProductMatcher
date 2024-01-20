@@ -21,6 +21,8 @@ from PyQt6.QtWidgets import (
     QFileDialog,
     QTableView,
     QComboBox,
+    QStatusBar,
+    QProgressBar,
 )
 
 from PyQt6.QtCore import (
@@ -37,7 +39,7 @@ PROJECT_DIR = GUI_DIR.parent
 
 sys.path.append(str(GUI_DIR))
 
-from config.measures_config.config_parser import CONFIG, MEASURE, DATA, FEATURE
+from config.measures_config.config_parser import CONFIG, MEASURE, DATA, UNIT
 
 
 class TreeItem(object):
@@ -91,8 +93,8 @@ class TreeItem(object):
         key_name = ""
         if MEASURE.NAME in value:
             key_name = value[MEASURE.NAME]
-        elif FEATURE.NAME in value:
-            key_name = value[FEATURE.NAME]
+        elif UNIT.NAME in value:
+            key_name = value[UNIT.NAME]
         else:
             key_name = ""
 
@@ -367,6 +369,36 @@ class CommonGUI(QWidget):
 
     def __init__(self) -> None:
         super().__init__()
+
+    def _setup_progress_bar(self, main_layout: QVBoxLayout) -> QProgressBar:
+        progress_layout = QHBoxLayout()
+
+        label = QLabel("Прогресс: ")
+        self.progress_bar = QProgressBar()
+
+        progress_layout.addWidget(label)
+        progress_layout.addWidget(self.progress_bar)
+        main_layout.addLayout(progress_layout)
+
+        return self.progress_bar
+
+    def progress_callback(self, progress: float) -> None:
+        self.progress_bar.setValue(progress)
+
+    def _setup_status_bar(self, main_layout: QVBoxLayout) -> QStatusBar:
+        status_layout = QHBoxLayout()
+
+        label = QLabel("Статус: ")
+        self.status_bar = QStatusBar()
+
+        status_layout.addWidget(label)
+        status_layout.addWidget(self.status_bar)
+        main_layout.addLayout(status_layout)
+
+        return self.status_bar
+
+    def status_callback(self, message: str) -> None:
+        self.status_bar.showMessage(message)
 
     def _setup_workfile_layout(self, main_layout: QVBoxLayout) -> QLineEdit:
         file_layout = QHBoxLayout()
