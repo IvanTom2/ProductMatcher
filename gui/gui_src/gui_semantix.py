@@ -13,7 +13,7 @@ from PyQt6.QtWidgets import (
     QApplication,
     QCheckBox,
 )
-from PyQt6.QtCore import QThread
+from PyQt6.QtCore import QThread, pyqtSignal
 
 
 GUI_DIR = Path(__file__).parent.parent
@@ -43,6 +43,8 @@ class RunButtonStatus(object):
 
 
 class SemantixProcessRunner(QThread):
+    progress_signal = pyqtSignal(int)
+
     def __init__(
         self,
         config: str | Path,
@@ -62,7 +64,7 @@ class SemantixProcessRunner(QThread):
             config,
             True,
             status_callback,
-            progress_callback,
+            self.call_progress,
         )
 
         crosser_lang_rules = self.setup_crosser_lang_rules(cross_sem_langs)
@@ -71,7 +73,7 @@ class SemantixProcessRunner(QThread):
             delete_rx=True,
             process_nearest=250,
             status_callback=status_callback,
-            progress_callback=progress_callback,
+            progress_callback=self.call_progress,
         )
 
         self.status_callback = status_callback
@@ -133,8 +135,7 @@ class SemantixProcessRunner(QThread):
             self.status_callback(message)
 
     def call_progress(self, progress: int) -> None:
-        if self.progress_callback is not None:
-            self.progress_callback(progress)
+        self.progress_signal.emit(progress)
 
     def run_measure_extraction(self, data: pd.DataFrame) -> pd.DataFrame:
         try:
@@ -245,6 +246,8 @@ class SemantixWidget(CommonGUI):
             self.run()
         elif self.run_button.text() == RunButtonStatus.RUNNIG:
             self.stop()
+        elif self.run_button.text() == RunButtonStatus.STOPPING:
+            pass
 
     def run(self) -> None:
         self.run_button_status(RunButtonStatus.RUNNIG)
@@ -266,6 +269,8 @@ class SemantixWidget(CommonGUI):
             progress_callback=self.progress_callback,
             run_button_callback=self.run_button_status,
         )
+
+        self.extractor.progress_signal.connect(self.progress_bar.setValue)
         self.extractor_stop: callable = self.extractor.stop_callback
         self.extractor.start()
 

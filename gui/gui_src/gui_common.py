@@ -32,6 +32,7 @@ from PyQt6.QtCore import (
     Qt,
     QFileInfo,
     QAbstractTableModel,
+    pyqtSignal,
 )
 
 GUI_DIR = Path(__file__).parent.parent
@@ -365,6 +366,7 @@ class ConfigViewerDialog(QDialog):
 
 
 class CommonGUI(QWidget):
+    progress_signal = pyqtSignal(int)
     CONFIG_PATH = ""
 
     def __init__(self) -> None:
@@ -382,7 +384,7 @@ class CommonGUI(QWidget):
 
         return self.progress_bar
 
-    def progress_callback(self, progress: float) -> None:
+    def progress_callback(self, progress: int) -> None:
         self.progress_bar.setValue(progress)
 
     def _setup_status_bar(self, main_layout: QVBoxLayout) -> QStatusBar:

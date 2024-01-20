@@ -256,65 +256,66 @@ class CrosserPro(Crosser):
         self._stopped = True
 
     def extract(self, data: pd.DataFrame, col: str):
-        resort_by_index = False
-        # self._show_status()
+        if len(self.extractors) > 0:
+            resort_by_index = False
+            # self._show_status()
 
-        self.call_status("Предобработка для кросс-семантики")
-        data = self._setup(data)
-        data = self._del_rx(data, col)
-        data = self.get_tokens_pro(data, "row", self.extractors)
+            self.call_status("Предобработка для кросс-семантики")
+            data = self._setup(data)
+            data = self._del_rx(data, col)
+            data = self.get_tokens_pro(data, "row", self.extractors)
 
-        if self.process_nearest:
-            resort_by_index = True
-            data = data.sort_values(by=[col])
-
-        indexes = list(data.index)
-
-        count = 0
-        total = len(indexes)
-
-        self.call_status("Извлекаю кросс-семантику")
-        self.call_progress(count, total)
-        for pos_index in range(len(indexes)):
-            if self._stopped:
-                raise CrosserGracefullExit
-
-            index = indexes[pos_index]
-            current_set = data.at[index, "tokens"]
-
-            rest_indexes = indexes[:]  # or use copy.copy(indexes)
             if self.process_nearest:
-                rest_indexes = indexes[
-                    max(0, pos_index - self.process_nearest) : min(
-                        len(indexes), pos_index + self.process_nearest + 1
-                    )
-                ]
+                resort_by_index = True
+                data = data.sort_values(by=[col])
 
-            if index in rest_indexes:
-                rest_indexes.remove(index)  # can be profiled?
+            indexes = list(data.index)
 
-            for rest_index in rest_indexes:
-                other_set = data.at[rest_index, "tokens"]
+            count = 0
+            total = len(indexes)
 
-                if self.make_cross_minus:
-                    self._call_cross_minus(
-                        data, col, current_set, other_set, index, rest_index
-                    )
-                if self.make_cross_intersect:
-                    self._call_cross_intersect(
-                        data, col, current_set, other_set, index, rest_index
-                    )
-
-            count += 1
+            self.call_status("Извлекаю кросс-семантику")
             self.call_progress(count, total)
+            for pos_index in range(len(indexes)):
+                if self._stopped:
+                    raise CrosserGracefullExit
 
-        data = self._to_list(data)
-        data = self._join(data)
+                index = indexes[pos_index]
+                current_set = data.at[index, "tokens"]
 
-        data.drop("tokens", axis=1, inplace=True)
-        data.drop("row", axis=1, inplace=True)
+                rest_indexes = indexes[:]  # or use copy.copy(indexes)
+                if self.process_nearest:
+                    rest_indexes = indexes[
+                        max(0, pos_index - self.process_nearest) : min(
+                            len(indexes), pos_index + self.process_nearest + 1
+                        )
+                    ]
 
-        if resort_by_index:
-            data = data.sort_index()
+                if index in rest_indexes:
+                    rest_indexes.remove(index)  # can be profiled?
+
+                for rest_index in rest_indexes:
+                    other_set = data.at[rest_index, "tokens"]
+
+                    if self.make_cross_minus:
+                        self._call_cross_minus(
+                            data, col, current_set, other_set, index, rest_index
+                        )
+                    if self.make_cross_intersect:
+                        self._call_cross_intersect(
+                            data, col, current_set, other_set, index, rest_index
+                        )
+
+                count += 1
+                self.call_progress(count, total)
+
+            data = self._to_list(data)
+            data = self._join(data)
+
+            data.drop("tokens", axis=1, inplace=True)
+            data.drop("row", axis=1, inplace=True)
+
+            if resort_by_index:
+                data = data.sort_index()
 
         return data
