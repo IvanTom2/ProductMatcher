@@ -157,6 +157,7 @@ class SemantixProcessRunner(QThread):
             data.to_excel(PROJECT_DIR / OUTPUT_FILENAME, index=False)
 
             self.call_status("Сохранено")
+            self.call_progress(0)
             if self.run_button_callback is not None:
                 self.run_button_callback(RunButtonStatus.STOPPED)
 
