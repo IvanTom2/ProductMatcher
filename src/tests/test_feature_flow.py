@@ -84,8 +84,8 @@ class FeatureFlowGenericsTestsDebug(TestFeatureFlowGenerics):
     def __init__(self) -> None:
         super().__init__()
         self.debug = True
-        self.process_pool = None
-        # self.process_pool = multiprocessing.Pool(8)
+        # self.process_pool = None
+        self.process_pool = multiprocessing.Pool(8)
 
 
 class FeatureVCustomTestsDebug(TestFeatureFlowCustom):
