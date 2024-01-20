@@ -64,7 +64,7 @@ class SemantixProcessRunner(QThread):
             config,
             True,
             status_callback,
-            self.call_progress,
+            progress_callback,
         )
 
         crosser_lang_rules = self.setup_crosser_lang_rules(cross_sem_langs)
@@ -73,7 +73,7 @@ class SemantixProcessRunner(QThread):
             delete_rx=True,
             process_nearest=250,
             status_callback=status_callback,
-            progress_callback=self.call_progress,
+            progress_callback=progress_callback,
         )
 
         self.status_callback = status_callback
@@ -135,7 +135,8 @@ class SemantixProcessRunner(QThread):
             self.status_callback(message)
 
     def call_progress(self, progress: int) -> None:
-        self.progress_signal.emit(progress)
+        if self.progress_callback:
+            self.progress_callback(progress)
 
     def run_measure_extraction(self, data: pd.DataFrame) -> pd.DataFrame:
         try:
@@ -270,7 +271,7 @@ class SemantixWidget(CommonGUI):
             run_button_callback=self.run_button_status,
         )
 
-        self.extractor.progress_signal.connect(self.progress_bar.setValue)
+        self.progress_signal.connect(self.progress_bar.setValue)
         self.extractor_stop: callable = self.extractor.stop_callback
         self.extractor.start()
 

@@ -385,7 +385,7 @@ class CommonGUI(QWidget):
         return self.progress_bar
 
     def progress_callback(self, progress: int) -> None:
-        self.progress_bar.setValue(progress)
+        self.progress_signal.emit(progress)
 
     def _setup_status_bar(self, main_layout: QVBoxLayout) -> QStatusBar:
         status_layout = QHBoxLayout()
