@@ -1,7 +1,6 @@
 import sys
 import regex as re
 from abc import ABC
-from collections import namedtuple
 from decimal import Decimal
 from pathlib import Path
 

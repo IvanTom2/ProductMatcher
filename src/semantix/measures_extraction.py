@@ -251,25 +251,3 @@ class SizeExtractor(Extractor):
         data = self._clean_up(data)
 
         return data
-
-
-if __name__ == "__main__":
-    data = pd.DataFrame()
-    data.at[0, "name"] = "Мандарин 10мл"
-    data.at[1, "name"] = "Мандарин 11шт"
-    data.at[2, "name"] = "Мандарин 12шт"
-    data.at[3, "name"] = "Мандарин 1шт"
-
-    config = read_config(
-        "/home/mainus/Projects/ProductMatcher/config/measures_config/setups/main.json"
-    )
-
-    mExtractor = MeasureExtractor(config)
-    mAllExtractor = MeasuresExtractor(config)
-
-    # series = mExtractor.extract(data, "name", "Количество")
-    # print(series)
-
-    data = mAllExtractor.extract(data, "name", True)
-    print(data.at[3, "Regex"])
-    print(data)

@@ -1,22 +1,10 @@
-import os
 import sys
-import json
-import multiprocessing
 from pathlib import Path
 from PyQt6.QtWidgets import (
-    QTreeView,
     QWidget,
     QVBoxLayout,
-    QHBoxLayout,
-    QLabel,
-    QLineEdit,
-    QPushButton,
-    QComboBox,
-    QMenuBar,
-    QFileDialog,
     QMainWindow,
     QTabWidget,
-    QApplication,
 )
 
 GUI_DIR = Path(__file__).parent
@@ -71,11 +59,3 @@ class MainWindow(QMainWindow):
         center_y = (screen_size.height() - self.height()) // 2
 
         self.move(center_x, center_y)
-
-
-if __name__ == "__main__":
-    with multiprocessing.Pool() as process_pool:
-        app = QApplication(sys.argv)
-        window = MainWindow(process_pool)
-        window.show()
-        sys.exit(app.exec())

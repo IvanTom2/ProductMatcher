@@ -1,13 +1,11 @@
 import sys
-import pytest
 import itertools
 import json
 import random
 import pandas as pd
-from enum import Enum
 from decimal import Decimal
 from pathlib import Path
-from typing import List, Tuple, Dict
+from typing import List, Tuple
 
 
 CLIENT_RECORD = "_client_record_test"
@@ -644,10 +642,3 @@ class FuzzyDataSet(object):
 
 MEASURES_CONFIG = get_measures_config()
 FUZZY_CONFIG = get_fuzzy_config()
-
-
-if __name__ == "__main__":
-    ds = FuzzyDataSet()
-
-    data = ds.small()
-    print(data)

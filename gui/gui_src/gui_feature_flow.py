@@ -8,7 +8,6 @@ from PyQt6.QtWidgets import (
     QApplication,
     QHBoxLayout,
     QLabel,
-    QPushButton,
     QLineEdit,
 )
 from PyQt6.QtCore import QThread

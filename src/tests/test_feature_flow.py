@@ -92,12 +92,3 @@ class FeatureVCustomTestsDebug(TestFeatureFlowCustom):
     def __init__(self) -> None:
         super().__init__()
         self.debug = True
-
-
-if __name__ == "__main__":
-    start = time.time()
-
-    test = FeatureFlowGenericsTestsDebug()
-    test.test_generics_feature_validation()
-
-    print("EXECUTION TIME", time.time() - start)

@@ -326,8 +326,3 @@ class MarksCounter(AbstractMarksCounter):
             )
 
         return data
-
-
-if __name__ == "__main__":
-    val = 0
-    print(RateFunction.sqrt2(val))

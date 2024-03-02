@@ -1,4 +1,3 @@
-import json
 import sys
 import regex as re
 from decimal import Decimal

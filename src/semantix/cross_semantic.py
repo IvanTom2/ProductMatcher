@@ -3,7 +3,6 @@ import pandas as pd
 import re
 import copy
 
-from tqdm import tqdm
 from pathlib import Path
 from typing import Callable
 
@@ -14,7 +13,6 @@ sys.path.append(str(PROJECT_DIR))
 from src.semantix.common import del_rx, LanguageRules
 from src.semantix.common import BasicCrosser
 from src.functool.word_extraction import (
-    words_cleaner,
     words_filter,
     words_join,
     words_stemming,

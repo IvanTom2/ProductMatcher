@@ -86,12 +86,3 @@ class FuzzyVGenericsTestsDebug(TestFuzzyVGenerics):
         self.debug = True
         # self.process_pool = None
         self.process_pool = multiprocessing.Pool(4)
-
-
-if __name__ == "__main__":
-    start = time.time()
-
-    test = FuzzyVGenericsTestsDebug()
-    test.test_generics_fuzzy_validation()
-
-    print("EXEC TIME", time.time() - start)

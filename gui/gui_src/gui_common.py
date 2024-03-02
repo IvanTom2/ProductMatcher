@@ -4,12 +4,9 @@ import json
 import pandas as pd
 from pathlib import Path
 from typing import Any, List, Dict, Union
-from functools import partial
 
 from PyQt6.QtWidgets import (
     QTreeView,
-    QApplication,
-    QHeaderView,
     QDialog,
     QFormLayout,
     QWidget,
@@ -30,7 +27,6 @@ from PyQt6.QtCore import (
     QModelIndex,
     QObject,
     Qt,
-    QFileInfo,
     QAbstractTableModel,
     pyqtSignal,
 )

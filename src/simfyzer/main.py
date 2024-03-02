@@ -308,22 +308,3 @@ def read_config(path: str | Path) -> dict:
     with open(path, "rb") as file:
         data = json.loads(file.read())
     return data
-
-
-if __name__ == "__main__":
-    data = pd.read_excel("/home/mainus/Projects/ProductMatcher/FarmaImpex2.xlsx")
-
-    config = read_config(
-        "/home/mainus/Projects/ProductMatcher/config/simfyzer_config/setups/main.json"
-    )
-
-    validator = setup_SimFyzer(config, 0.75, 0.5)
-    process_pool = multiprocessing.Pool(4)
-
-    data: pd.DataFrame = validator.validate(
-        data,
-        "Строка валидации",
-        "Наименование товара клиента",
-        # process_pool,
-    )
-    data.to_excel("jakkar_check.xlsx")

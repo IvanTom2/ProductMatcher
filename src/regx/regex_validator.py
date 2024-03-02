@@ -378,32 +378,3 @@ class RegexValidatorPro(RegexValidator):
         val_data = self._make_desicion(val_data)
         val_data = self._drop_merged(val_data)
         return val_data
-
-
-if __name__ == "__main__":
-    semantic, validation = upload_data(
-        semantic_path=r"C:\Users\tomilov-iv\Desktop\KATREN\Ozon\semantic_EAN.xlsx",
-        validation_path=r"C:\Users\tomilov-iv\Desktop\KATREN\Ozon\valid\val3\ean_counts.xlsx",
-    )
-
-    # rx = RegexValidatorPro(
-    #     semantic,
-    #     validation,
-    #     plus_weight=1,
-    #     minus_weight=1,
-    #     regex_weight=1,
-    #     use_fuzzy=[MinusFuzzy],
-    #     strict=[PlusStrict],
-    # )
-    # val = rx.validate()
-
-    regex_validator = RegexValidator(
-        semantic,
-        validation,
-        semantic_merge_by="Название",
-        validation_merge_by="Строка валидации",
-    )
-    validation = regex_validator.validate()
-    # print(validation)
-
-    validation.to_excel("validated.xlsx", index=False)

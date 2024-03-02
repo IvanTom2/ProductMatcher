@@ -1,6 +1,3 @@
-from enum import Enum
-
-
 class CONFIG(object):
     NAME = "config_name"
 
