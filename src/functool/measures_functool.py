@@ -33,7 +33,7 @@ class MeasuresGracefullExit(Exception):
 
 
 class SearchMode(object):
-    """Measure Search Mode\n
+    """Measure Search Mode
     Using for determing position of search value (\d+)
 
     Mode can be:
@@ -64,7 +64,7 @@ class SearchMode(object):
 
 
 class MergeMode(object):
-    """Measure Merge Mode\n
+    """Measure Merge Mode
     Using for merging units to one regex
 
     Mode can be:
@@ -95,7 +95,7 @@ class MergeMode(object):
 class CommonValues(object):
     """
     Determine if unit config value should
-    be determined as common measure value\n
+    be determined as common measure value
     It can be common Prefix or Postfix
     """
 
@@ -717,4 +717,3 @@ def read_config(path: str):
     with open(path, "rb") as file:
         data = json.loads(file.read())
     return data
-
